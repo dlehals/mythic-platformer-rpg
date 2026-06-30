@@ -1,0 +1,71 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Mythic Terrain RPG</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="game-shell">
+    <div id="game-root"></div>
+
+    <div id="hud" class="hud">
+      <div class="hud-top">
+        <span id="levelText">Lv. 1</span>
+        <span id="jobText">No Class</span>
+        <span id="goldText">0g</span>
+      </div>
+      <div class="bar hp"><span id="hpFill"></span><b id="hpText">HP</b></div>
+      <div class="bar mp"><span id="mpFill"></span><b id="mpText">MP</b></div>
+      <div id="skillBar" class="skill-bar"></div>
+      <div class="hud-actions">
+        <button id="inventoryButton">Inventory</button>
+        <button id="saveButton">Save</button>
+        <button id="resetButton">Reset</button>
+      </div>
+      <div class="exp-line"><span id="expFill"></span></div>
+    </div>
+
+    <div id="comboTracker" class="combo-tracker">0 Combo</div>
+    <div id="prompt" class="prompt"></div>
+    <div id="toast" class="toast"></div>
+
+    <div id="classModal" class="modal visible">
+      <div class="modal-card">
+        <h1>Choose Your Base Class</h1>
+        <p>기본 직업은 나중에 지형 진화로 갈라지고, Mythic 무기는 모든 진화를 덮어씁니다.</p>
+        <div id="classChoices" class="choice-grid"></div>
+      </div>
+    </div>
+
+    <div id="inventoryModal" class="modal">
+      <div class="modal-card inventory-card">
+        <div class="modal-head">
+          <h2>Inventory</h2>
+          <button id="closeInventory">Close</button>
+        </div>
+        <div id="inventoryList" class="inventory-list"></div>
+      </div>
+    </div>
+
+    <div id="mobileControls" class="mobile-controls">
+      <div class="move-pad">
+        <button data-touch="left">◀</button>
+        <button data-touch="right">▶</button>
+      </div>
+      <div class="action-pad">
+        <button data-touch="jump">J</button>
+        <button data-touch="attack">X</button>
+        <button data-touch="skillZ">Z</button>
+        <button data-touch="skillC">C</button>
+        <button data-touch="skillV">V</button>
+        <button data-touch="skillR">R</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
