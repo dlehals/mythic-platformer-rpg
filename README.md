@@ -27,5 +27,6 @@ Phaser 3 Arcade Physics 기반의 GitHub Pages용 정적 2D 액션 RPG입니다.
 - 기본 직업 4종: Berserker, Sniper, Sorcerer, Assassin
 - 지형 4종: Lava, Frost, Ruin, Abyss
 - 지형 보스 재료를 통한 진화
-- Mythic 무기를 통한 독립 각성
+- 신화 무기를 통한 독립 각성
 - HUD, 인벤토리, 판매, 저장, 모바일 터치 조작 포함
+

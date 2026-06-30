@@ -3,38 +3,76 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Mythic Terrain RPG</title>
+  <title>미스틱 테레인 RPG</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div id="game-shell">
     <div id="game-root"></div>
 
+    <section id="startScreen" class="start-screen visible">
+      <div class="start-backdrop"></div>
+      <div class="title-panel">
+        <div class="title-kicker">PHASER 3 횡스크롤 액션 RPG</div>
+        <h1>미스틱 테레인 RPG</h1>
+        <p>기본 직업, 지형 진화, 신화 각성이 한 캐릭터에 누적되는 액션 RPG</p>
+        <div id="loginPanel" class="login-panel">
+          <label for="playerNameInput">플레이어 이름</label>
+          <div class="login-row">
+            <input id="playerNameInput" maxlength="16" placeholder="닉네임 입력" />
+            <button id="loginButton">로그인</button>
+          </div>
+        </div>
+        <div id="mainMenu" class="main-menu">
+          <div class="profile-strip">
+            <div id="menuAvatar" class="paper-doll berserker"></div>
+            <div>
+              <strong id="menuProfileName">게스트</strong>
+              <span id="menuProfileInfo">저장 데이터 없음</span>
+            </div>
+          </div>
+          <div class="menu-actions">
+            <button id="continueButton">이어하기</button>
+            <button id="newGameButton">새 캐릭터</button>
+            <button id="menuInventoryButton">가방</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside id="characterPanel" class="character-panel">
+      <div id="hudAvatar" class="paper-doll berserker"></div>
+      <div class="character-copy">
+        <strong id="profileNameText">게스트</strong>
+        <span id="equippedText">장착 무기 없음</span>
+      </div>
+    </aside>
+
     <div id="hud" class="hud">
       <div class="hud-top">
         <span id="levelText">Lv. 1</span>
-        <span id="jobText">No Class</span>
-        <span id="goldText">0g</span>
+        <span id="jobText">직업 없음</span>
+        <span id="goldText">0골드</span>
       </div>
       <div class="bar hp"><span id="hpFill"></span><b id="hpText">HP</b></div>
       <div class="bar mp"><span id="mpFill"></span><b id="mpText">MP</b></div>
       <div id="skillBar" class="skill-bar"></div>
       <div class="hud-actions">
-        <button id="inventoryButton">Inventory</button>
-        <button id="saveButton">Save</button>
-        <button id="resetButton">Reset</button>
+        <button id="inventoryButton">가방</button>
+        <button id="saveButton">저장</button>
+        <button id="resetButton">초기화</button>
       </div>
       <div class="exp-line"><span id="expFill"></span></div>
     </div>
 
-    <div id="comboTracker" class="combo-tracker">0 Combo</div>
+    <div id="comboTracker" class="combo-tracker">0 콤보</div>
     <div id="prompt" class="prompt"></div>
     <div id="toast" class="toast"></div>
 
-    <div id="classModal" class="modal visible">
+    <div id="classModal" class="modal">
       <div class="modal-card">
-        <h1>Choose Your Base Class</h1>
-        <p>기본 직업은 나중에 지형 진화로 갈라지고, Mythic 무기는 모든 진화를 덮어씁니다.</p>
+        <h1>기본 직업 선택</h1>
+        <p>직업마다 전투 방식과 외형 실루엣이 달라집니다. 지형 진화와 신화 장비는 이 외형 위에 덧입혀집니다.</p>
         <div id="classChoices" class="choice-grid"></div>
       </div>
     </div>
@@ -42,8 +80,8 @@
     <div id="inventoryModal" class="modal">
       <div class="modal-card inventory-card">
         <div class="modal-head">
-          <h2>Inventory</h2>
-          <button id="closeInventory">Close</button>
+          <h2>가방</h2>
+          <button id="closeInventory">닫기</button>
         </div>
         <div id="inventoryList" class="inventory-list"></div>
       </div>
@@ -69,3 +107,6 @@
   <script src="game.js"></script>
 </body>
 </html>
+
+
+

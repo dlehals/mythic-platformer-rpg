@@ -9,23 +9,23 @@
 
   const BASE_CLASSES = {
     berserker: {
-      title: 'Berserker', color: 0xff5a4f,
-      desc: '강한 근접 콤보, 넓은 판정, 폭발적인 궁극기.',
+      title: '광전사', color: 0xff5a4f,
+      desc: '대검과 중갑 실루엣. 넓은 근접 판정과 폭발적인 궁극기가 강점.',
       stats: { hp: 170, mp: 70, atk: 17, speed: 235, jump: 520, crit: 0.08 }
     },
     sniper: {
-      title: 'Sniper', color: 0x8be9fd,
-      desc: '화살과 관통 사격으로 거리를 지배하는 원거리 직업.',
+      title: '저격수', color: 0x8be9fd,
+      desc: '후드와 장궁 실루엣. 거리 유지, 관통 사격, 확정 치명타에 특화.',
       stats: { hp: 125, mp: 95, atk: 14, speed: 255, jump: 515, crit: 0.13 }
     },
     sorcerer: {
-      title: 'Sorcerer', color: 0xb388ff,
-      desc: '원소 투사체, 순간이동, 마나 보호막을 쓰는 마법 직업.',
+      title: '원소술사', color: 0xb388ff,
+      desc: '로브와 지팡이 실루엣. 원소 투사체, 점멸, 마나 보호막을 사용.',
       stats: { hp: 115, mp: 145, atk: 15, speed: 230, jump: 500, crit: 0.1 }
     },
     assassin: {
-      title: 'Assassin', color: 0x8aff80,
-      desc: '빠른 근접 타격, 독, 은신, 연속 베기로 폭딜을 넣는 직업.',
+      title: '암살자', color: 0x8aff80,
+      desc: '마스크와 쌍단검 실루엣. 은신, 독, 순간 폭딜에 특화.',
       stats: { hp: 130, mp: 95, atk: 15, speed: 285, jump: 535, crit: 0.16 }
     }
   };
@@ -71,6 +71,28 @@
     ruin: { berserker: 'Stormbreaker', sniper: 'Relic Arbalist', sorcerer: 'Tempest Sage', assassin: 'Volt Shade', aura: '#ffd166', status: 'shock' },
     abyss: { berserker: 'Void Executioner', sniper: 'Umbral Deadeye', sorcerer: 'Abyss Oracle', assassin: 'Night Herald', aura: '#ba55d3', status: 'doom' }
   };
+
+
+  const JOB_LABELS = {
+    Berserker: '광전사', Sniper: '저격수', Sorcerer: '원소술사', Assassin: '암살자',
+    'Fire Knight': '화염 기사', 'Flame Scout': '화염 정찰자', Pyroclast: '폭염술사', 'Hell Stalker': '지옥 추적자',
+    'Glacier Guard': '빙하 수호자', 'Frost Ranger': '서리 순찰자', Cryomancer: '빙결술사', 'Pale Phantom': '백색 환영',
+    Stormbreaker: '폭풍 파쇄자', 'Relic Arbalist': '유적 쇠뇌수', 'Tempest Sage': '폭풍 현자', 'Volt Shade': '전광 그림자',
+    'Void Executioner': '공허 처형자', 'Umbral Deadeye': '암영 명사수', 'Abyss Oracle': '심연 예언자', 'Night Herald': '밤의 전령',
+    'Grim Reaper': '그림 리퍼', 'Time Intervener': '시간 개입자', 'No Class': '직업 없음'
+  };
+
+  const SKILL_LABELS = {
+    'Power Slash': '파워 슬래시', 'Leap Attack': '도약 강타', Berserk: '광폭화', 'Bloody Carnage': '피의 난무',
+    'Multiple Shot': '다중 사격', 'Backstep Arrow': '후퇴 사격', Focus: '집중', 'Piercing Strike': '관통 일격',
+    'Flame Burst': '화염 폭발', 'Ice Blink': '빙결 점멸', 'Mana Shield': '마나 보호막', 'Meteor Strike': '운석 낙하',
+    'Shadow Strike': '그림자 습격', 'Poison Blade': '맹독 단검', Stealth: '은신', 'Phantom Frenzy': '환영 난무',
+    "Reaper's Sweep": '사신의 수확', 'Soul Dash': '영혼 질주', "Death's Shroud": '죽음의 장막', 'Doomsday Mark': '종말 표식',
+    'Space-Time Collapse': '시공 붕괴', 'Paradox Blink': '역설 점멸', 'Temporal Rewind': '시간 되감기', 'Chrono Freeze': '시간 정지'
+  };
+
+  function koJob(name) { return JOB_LABELS[name] || name; }
+  function koSkill(name) { return SKILL_LABELS[name] || name; }
 
   const MYTHIC_ITEMS = [
     { name: "Reaper's Scythe", mythic: 'reaper', desc: 'Grim Reaper 각성. 모든 기존 직업 구조를 덮어씁니다.' },
@@ -121,6 +143,7 @@
 
   function freshSave() {
     return {
+      playerName: '',
       baseClass: null, path: 'base', terrain: null, mythic: null, zone: 'town',
       level: 1, exp: 0, gold: 60, hp: 0, mp: 0,
       inventory: [], equipped: null, materials: {}, zoneKills: {}, bossKills: {}, defeatedBosses: {},
@@ -177,11 +200,11 @@
   }
 
   function getJobTitle() {
-    if (save.path === 'mythic') return save.mythic === 'chrono' ? 'Time Intervener' : 'Grim Reaper';
+    if (save.path === 'mythic') return save.mythic === 'chrono' ? koJob('Time Intervener') : koJob('Grim Reaper');
     if (save.path === 'terrain' && save.terrain && TERRAIN_JOBS[save.terrain]) {
-      return TERRAIN_JOBS[save.terrain][save.baseClass] || 'Terrain Class';
+      return koJob(TERRAIN_JOBS[save.terrain][save.baseClass] || 'Terrain Class');
     }
-    return BASE_CLASSES[save.baseClass]?.title || 'No Class';
+    return BASE_CLASSES[save.baseClass]?.title || koJob('No Class');
   }
 
   function getActiveSkills() {
@@ -258,13 +281,68 @@
     };
   })();
 
+
+  function getEquippedItem() {
+    return save.inventory.find((item) => item.id === save.equipped) || null;
+  }
+
+  function getEquippedLabel() {
+    const item = getEquippedItem();
+    if (item) return `${item.name} 장착 중`;
+    if (save.path === 'terrain' && save.terrain) return `${ZONES[save.terrain].title} 진화 장비 활성화`;
+    return '장착 무기 없음';
+  }
+
+  function getAvatarClass() {
+    if (save.path === 'mythic') return save.mythic === 'chrono' ? 'chrono' : 'reaper';
+    const base = save.baseClass || 'berserker';
+    return save.path === 'terrain' && save.terrain ? `${base} terrain-${save.terrain}` : base;
+  }
+
+  function setPaperDoll(id) {
+    const node = $(id);
+    if (!node) return;
+    node.className = `paper-doll ${getAvatarClass()}`;
+    node.innerHTML = '<span class="weapon"></span>';
+  }
+
+  function updateProfileUi() {
+    const name = save.playerName || '게스트';
+    const info = save.baseClass ? `${getJobTitle()} · Lv.${save.level} · ${save.gold}골드` : '캐릭터 생성 필요';
+    if ($('profileNameText')) $('profileNameText').textContent = name;
+    if ($('equippedText')) $('equippedText').textContent = getEquippedLabel();
+    if ($('menuProfileName')) $('menuProfileName').textContent = name;
+    if ($('menuProfileInfo')) $('menuProfileInfo').textContent = info;
+    setPaperDoll('hudAvatar');
+    setPaperDoll('menuAvatar');
+    if ($('loginPanel')) $('loginPanel').style.display = save.playerName ? 'none' : 'block';
+    if ($('mainMenu')) $('mainMenu').classList.toggle('visible', !!save.playerName);
+    if ($('continueButton')) $('continueButton').disabled = !save.baseClass;
+  }
+
+  function hideStartScreen() {
+    if ($('startScreen')) $('startScreen').classList.remove('visible');
+    if (activeScene && save.baseClass) activeScene.physics.resume();
+  }
+
+  function showStartScreen() {
+    if ($('startScreen')) $('startScreen').classList.add('visible');
+    if (activeScene) activeScene.physics.pause();
+    updateProfileUi();
+  }
+
+  function showClassSelect() {
+    if ($('classModal')) $('classModal').classList.add('visible');
+    if (activeScene) activeScene.physics.pause();
+  }
+
   function renderSkills(scene) {
     const bar = $('skillBar');
     const skills = getActiveSkills();
     bar.innerHTML = skills.map((skill) => `
       <div class="skill-slot" data-skill="${skill.key}">
         <strong>${skill.key}</strong>
-        <small>${skill.name}</small>
+        <small>${koSkill(skill.name)}</small>
         <div class="skill-cd"></div>
       </div>`).join('');
     updateHud(scene);
@@ -276,11 +354,11 @@
     const mp = (scene?.playerMp ?? save.mp) || stats.mp;
     $('levelText').textContent = `Lv. ${save.level}`;
     $('jobText').textContent = getJobTitle();
-    $('goldText').textContent = `${save.gold}g`;
+    $('goldText').textContent = `${save.gold}골드`;
     $('hpFill').style.width = `${clamp((hp / stats.hp) * 100, 0, 100)}%`;
     $('mpFill').style.width = `${clamp((mp / stats.mp) * 100, 0, 100)}%`;
-    $('hpText').textContent = `HP ${Math.ceil(hp)} / ${stats.hp}`;
-    $('mpText').textContent = `MP ${Math.ceil(mp)} / ${stats.mp}`;
+    $('hpText').textContent = `체력 ${Math.ceil(hp)} / ${stats.hp}`;
+    $('mpText').textContent = `마나 ${Math.ceil(mp)} / ${stats.mp}`;
     $('expFill').style.width = `${clamp((save.exp / expNeeded()) * 100, 0, 100)}%`;
 
     const now = scene?.time?.now || performance.now();
@@ -292,21 +370,22 @@
       const pct = skill?.cd ? clamp((remain / skill.cd) * 100, 0, 100) : 0;
       slot.querySelector('.skill-cd').style.height = `${pct}%`;
     });
+    updateProfileUi();
   }
-
   function renderInventory() {
     const list = $('inventoryList');
     if (!save.inventory.length) {
-      list.innerHTML = '<div class="item-row"><div>비어 있음<div class="meta">몬스터 처치, 보스 처치, Mythic 드랍으로 아이템을 얻습니다.</div></div></div>';
+      list.innerHTML = '<div class="item-row"><div>가방이 비어 있습니다<div class="meta">몬스터, 보스, Mythic 드랍으로 장비와 재료를 획득합니다.</div></div></div>';
       return;
     }
     list.innerHTML = save.inventory.map((item) => {
       const sell = ITEM_VALUES[item.rarity] || 10;
-      const equip = item.type === 'mythic' ? `<button data-equip="${item.id}">Equip</button>` : '<span></span>';
-      return `<div class="item-row">
-        <div><strong class="rarity-${item.rarity}">${item.name}</strong><div class="meta">${item.rarity} · ${item.desc || item.type} · Sell ${sell}g</div></div>
+      const equipped = save.equipped === item.id;
+      const equip = item.type === 'mythic' ? `<button data-equip="${item.id}">${equipped ? '장착됨' : '장착'}</button>` : '<span></span>';
+      return `<div class="item-row${equipped ? ' equipped' : ''}">
+        <div><strong class="rarity-${item.rarity}">${item.name}</strong><div class="meta">${item.rarity} · ${item.desc || item.type} · 판매가 ${sell}골드</div></div>
         ${equip}
-        <button data-sell="${item.id}">Scrap/Sell</button>
+        <button data-sell="${item.id}">분해/판매</button>
       </div>`;
     }).join('');
     list.querySelectorAll('[data-sell]').forEach((button) => {
@@ -315,8 +394,9 @@
         if (!item) return;
         save.gold += ITEM_VALUES[item.rarity] || 10;
         removeInventoryItem(item.id);
-        toast(`${item.name} 판매 +${ITEM_VALUES[item.rarity] || 10}g`);
+        toast(`${item.name} 판매 +${ITEM_VALUES[item.rarity] || 10}골드`);
         updateHud(activeScene);
+        updateProfileUi();
       });
     });
     list.querySelectorAll('[data-equip]').forEach((button) => {
@@ -331,33 +411,66 @@
         AudioFX.playAwakeSound();
         toast(`${getJobTitle()} 각성 완료`);
         $('inventoryModal').classList.remove('visible');
+        renderInventory();
+        updateProfileUi();
         if (activeScene) activeScene.refreshPlayerIdentity(true);
       });
     });
   }
-
   function setupDom() {
     const classChoices = $('classChoices');
     classChoices.innerHTML = Object.entries(BASE_CLASSES).map(([id, data]) => `
       <button class="choice-card" data-class="${id}">
+        <div class="paper-doll ${id}"><span class="weapon"></span></div>
         <h3>${data.title}</h3>
         <p>${data.desc}</p>
       </button>`).join('');
     classChoices.querySelectorAll('[data-class]').forEach((button) => {
       button.addEventListener('click', () => {
+        const playerName = save.playerName || $('playerNameInput')?.value?.trim() || '플레이어';
         save = freshSave();
+        save.playerName = playerName;
         save.baseClass = button.dataset.class;
         const stats = getBaseStats();
         save.hp = stats.hp;
         save.mp = stats.mp;
-        save.inventory.push({ id: `starter-${Date.now()}`, name: 'Starter Potion', rarity: 'Common', type: 'consumable', desc: '판매용 시작 아이템' });
+        save.inventory.push({ id: `starter-${Date.now()}`, name: '초보자의 보급품', rarity: 'Common', type: 'consumable', desc: '초반 자금용 보급품' });
         saveGame();
         $('classModal').classList.remove('visible');
+        hideStartScreen();
         AudioFX.playUiSound();
+        updateProfileUi();
         if (activeScene) activeScene.scene.restart();
       });
     });
-    $('classModal').classList.toggle('visible', !save.baseClass);
+
+    $('loginButton')?.addEventListener('click', () => {
+      const name = $('playerNameInput').value.trim();
+      if (!name) { toast('닉네임을 입력하세요.'); return; }
+      save.playerName = name;
+      saveGame();
+      AudioFX.playUiSound();
+      updateProfileUi();
+      if (!save.baseClass) showClassSelect();
+    });
+    $('playerNameInput')?.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') $('loginButton').click();
+    });
+    $('continueButton')?.addEventListener('click', () => {
+      if (!save.baseClass) { showClassSelect(); return; }
+      hideStartScreen();
+      AudioFX.playUiSound();
+    });
+    $('newGameButton')?.addEventListener('click', () => {
+      if (save.baseClass && !confirm('기존 캐릭터를 지우고 새로 시작할까요?')) return;
+      const playerName = save.playerName || $('playerNameInput')?.value?.trim() || '플레이어';
+      save = freshSave();
+      save.playerName = playerName;
+      saveGame();
+      updateProfileUi();
+      showClassSelect();
+    });
+    $('menuInventoryButton')?.addEventListener('click', () => { renderInventory(); $('inventoryModal').classList.add('visible'); });
     $('inventoryButton').addEventListener('click', () => { renderInventory(); $('inventoryModal').classList.add('visible'); AudioFX.playUiSound(); });
     $('closeInventory').addEventListener('click', () => $('inventoryModal').classList.remove('visible'));
     $('saveButton').addEventListener('click', () => { saveGame(); toast('저장 완료'); });
@@ -377,8 +490,9 @@
       button.addEventListener('pointercancel', () => set(false));
       button.addEventListener('pointerleave', () => set(false));
     });
+    updateProfileUi();
+    if ($('startScreen')) $('startScreen').classList.add('visible');
   }
-
   class GameScene extends Phaser.Scene {
     constructor() {
       super('GameScene');
@@ -427,26 +541,109 @@
       this.cameras.main.startFollow(this.player, true, 0.08, 0.08, 0, 90);
       renderSkills(this);
       renderInventory();
-      if (!save.baseClass) this.physics.pause();
+      if (!save.baseClass || $("startScreen")?.classList.contains("visible")) this.physics.pause();
     }
 
     createTextures() {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
       const makeRect = (key, w, h, color, stroke = 0xffffff) => {
         if (this.textures.exists(key)) return;
-        const g = this.make.graphics({ x: 0, y: 0, add: false });
+        g.clear();
         g.fillStyle(color, 1).fillRoundedRect(1, 1, w - 2, h - 2, 6);
         g.lineStyle(2, stroke, 0.55).strokeRoundedRect(1, 1, w - 2, h - 2, 6);
         g.generateTexture(key, w, h);
-        g.destroy();
       };
-      makeRect('player', 40, 58, 0xf2f2f2, 0x111111);
-      makeRect('monster', 42, 42, 0xff6a21, 0x2a0f0f);
-      makeRect('boss', 96, 104, 0xff3300, 0xffffff);
+      const drawHero = (key, palette, weapon) => {
+        if (this.textures.exists(key)) return;
+        g.clear();
+        g.fillStyle(0x000000, 0.26).fillEllipse(36, 86, 42, 8);
+        if (palette.cape) {
+          g.fillStyle(palette.cape, 0.82).fillTriangle(23, 29, 49, 29, 56, 78);
+          g.fillStyle(palette.capeDark, 0.75).fillTriangle(24, 31, 35, 78, 17, 79);
+        }
+        if (weapon === 'chrono') {
+          g.lineStyle(4, 0x67d9ff, 0.92).strokeCircle(36, 43, 32);
+          g.lineStyle(2, 0xffffff, 0.5).strokeCircle(36, 43, 22);
+        }
+        g.fillStyle(palette.boot, 1).fillRoundedRect(22, 67, 10, 17, 3).fillRoundedRect(40, 67, 10, 17, 3);
+        g.fillStyle(palette.leg, 1).fillRoundedRect(24, 51, 9, 23, 4).fillRoundedRect(39, 51, 9, 23, 4);
+        g.fillStyle(palette.arm, 1).fillRoundedRect(13, 34, 12, 29, 5).fillRoundedRect(47, 34, 12, 29, 5);
+        g.fillStyle(palette.trim, 1).fillRoundedRect(17, 30, 38, 13, 6);
+        g.fillStyle(palette.body, 1).fillRoundedRect(22, 29, 28, 39, 7);
+        g.fillStyle(palette.bodyDark, 0.8).fillTriangle(24, 35, 49, 35, 38, 67);
+        g.fillStyle(palette.trim, 1).fillRect(25, 45, 22, 4);
+        g.fillStyle(palette.skin, 1).fillCircle(36, 19, 12);
+        g.fillStyle(palette.hair, 1).fillRoundedRect(24, 9, 24, 12, 6);
+        g.fillStyle(palette.hair, 1).fillTriangle(25, 18, 18, 32, 30, 23).fillTriangle(48, 18, 54, 32, 42, 23);
+        g.fillStyle(0xffffff, 0.95).fillRect(31, 18, 3, 2).fillRect(40, 18, 3, 2);
+        g.fillStyle(palette.trim, 1).fillCircle(21, 35, 5).fillCircle(51, 35, 5);
+        if (weapon === 'sword') {
+          g.lineStyle(8, 0xd7e4ff, 1).lineBetween(53, 15, 58, 78);
+          g.lineStyle(2, 0x111111, 0.9).lineBetween(53, 15, 58, 78);
+          g.fillStyle(0xffd166, 1).fillRect(48, 54, 17, 5);
+        } else if (weapon === 'bow') {
+          g.lineStyle(4, 0xd4f1ff, 1).strokeCircle(54, 43, 18);
+          g.lineStyle(2, 0x10141d, 1).lineBetween(54, 25, 54, 61);
+          g.fillStyle(0xd4f1ff, 1).fillTriangle(38, 40, 54, 36, 54, 44);
+        } else if (weapon === 'staff') {
+          g.lineStyle(5, 0xe9d6ff, 1).lineBetween(54, 15, 49, 78);
+          g.fillStyle(0xb388ff, 1).fillCircle(55, 13, 8);
+          g.lineStyle(2, 0xffffff, 0.8).strokeCircle(55, 13, 11);
+        } else if (weapon === 'daggers') {
+          g.lineStyle(5, 0x8aff80, 1).lineBetween(16, 45, 3, 32).lineBetween(55, 45, 69, 32);
+          g.fillStyle(0xd7e4ff, 1).fillTriangle(2, 31, 9, 34, 5, 25).fillTriangle(70, 31, 63, 34, 67, 25);
+        } else if (weapon === 'scythe') {
+          g.lineStyle(6, 0xe8d7ff, 1).lineBetween(55, 10, 45, 82);
+          g.fillStyle(0xba55d3, 1).fillTriangle(55, 9, 70, 15, 55, 25);
+          g.fillStyle(0x191020, 1).fillTriangle(57, 13, 67, 16, 57, 20);
+        } else if (weapon === 'chrono') {
+          g.lineStyle(4, 0x67d9ff, 1).strokeCircle(58, 32, 12);
+          g.fillStyle(0xffffff, 0.9).fillCircle(58, 32, 3);
+        }
+        g.lineStyle(2, 0x050505, 0.62).strokeRoundedRect(22, 29, 28, 39, 7);
+        g.generateTexture(key, 72, 92);
+      };
+      const drawMonster = () => {
+        if (this.textures.exists('monster')) return;
+        g.clear();
+        g.fillStyle(0x000000, 0.25).fillEllipse(24, 40, 38, 8);
+        g.fillStyle(0x31121a, 1).fillTriangle(13, 13, 4, 1, 19, 9).fillTriangle(35, 13, 44, 1, 29, 9);
+        g.fillStyle(0xff6a21, 1).fillRoundedRect(7, 8, 34, 31, 11);
+        g.fillStyle(0x5b1b18, 1).fillRoundedRect(12, 27, 24, 17, 7);
+        g.fillStyle(0xffffff, 1).fillRect(16, 19, 4, 4).fillRect(29, 19, 4, 4);
+        g.fillStyle(0x151515, 1).fillRect(17, 20, 2, 2).fillRect(30, 20, 2, 2);
+        g.generateTexture('monster', 48, 48);
+      };
+      const drawBoss = () => {
+        if (this.textures.exists('boss')) return;
+        g.clear();
+        g.fillStyle(0x000000, 0.28).fillEllipse(55, 100, 88, 13);
+        g.fillStyle(0x401111, 1).fillRoundedRect(23, 20, 64, 79, 16);
+        g.fillStyle(0xff3300, 1).fillRoundedRect(15, 34, 23, 45, 8).fillRoundedRect(72, 34, 23, 45, 8);
+        g.fillStyle(0x8e1f16, 1).fillRoundedRect(33, 7, 44, 28, 12);
+        g.fillStyle(0xffc857, 1).fillTriangle(34, 9, 20, 0, 42, 4).fillTriangle(76, 9, 91, 0, 68, 4);
+        g.fillStyle(0xffffff, 1).fillRect(43, 23, 6, 5).fillRect(62, 23, 6, 5);
+        g.lineStyle(3, 0xffd166, 0.7).strokeRoundedRect(27, 43, 56, 43, 10);
+        g.generateTexture('boss', 110, 110);
+      };
+      drawHero('hero-berserker', { skin: 0xf2c894, hair: 0x342019, body: 0x9f2f2f, bodyDark: 0x5d1919, trim: 0xffd166, arm: 0x74302d, leg: 0x31202a, boot: 0x171015, cape: 0x5b161d, capeDark: 0x26080d }, 'sword');
+      drawHero('hero-sniper', { skin: 0xe9c7a4, hair: 0x172736, body: 0x247f9e, bodyDark: 0x0d3f55, trim: 0xd4f1ff, arm: 0x1d5870, leg: 0x152b36, boot: 0x0b151b, cape: 0x102b3b, capeDark: 0x07141c }, 'bow');
+      drawHero('hero-sorcerer', { skin: 0xe8c8a5, hair: 0x2a1847, body: 0x7148b8, bodyDark: 0x35205f, trim: 0xe9d6ff, arm: 0x56328f, leg: 0x24183f, boot: 0x120d22, cape: 0x3b216c, capeDark: 0x180b31 }, 'staff');
+      drawHero('hero-assassin', { skin: 0xd2b08f, hair: 0x0f1614, body: 0x25332c, bodyDark: 0x111a16, trim: 0x8aff80, arm: 0x1d2923, leg: 0x111813, boot: 0x080c0a, cape: 0x18241e, capeDark: 0x070b09 }, 'daggers');
+      drawHero('hero-reaper', { skin: 0xcdb8e8, hair: 0x0a070d, body: 0x17101d, bodyDark: 0x07040a, trim: 0xba55d3, arm: 0x1e1228, leg: 0x0c0712, boot: 0x050306, cape: 0x22102f, capeDark: 0x08030d }, 'scythe');
+      drawHero('hero-chrono', { skin: 0xd7e8ff, hair: 0x0d2032, body: 0x14304c, bodyDark: 0x071827, trim: 0x67d9ff, arm: 0x1f5274, leg: 0x0d2335, boot: 0x06121e, cape: 0x102840, capeDark: 0x050d18 }, 'chrono');
+      drawMonster();
+      drawBoss();
       makeRect('arrow', 34, 8, 0xd4f1ff, 0x161616);
       makeRect('orb', 18, 18, 0xb388ff, 0xffffff);
       makeRect('slash', 46, 18, 0xffffff, 0xffd166);
+      g.destroy();
     }
 
+    getPlayerTextureKey() {
+      if (save.path === 'mythic') return save.mythic === 'chrono' ? 'hero-chrono' : 'hero-reaper';
+      return `hero-${save.baseClass || 'berserker'}`;
+    }
     buildZone(zoneId) {
       this.zone = ZONES[zoneId] || ZONES.town;
       this.cameras.main.setBackgroundColor(this.zone.color);
@@ -489,23 +686,23 @@
       this.addPlatform(560, 520, 230, 30, 0x2e3a50);
       this.addPlatform(1120, 450, 260, 30, 0x2e3a50);
       this.addPlatform(1650, 540, 260, 30, 0x2e3a50);
-      this.addInteractable(280, 595, 150, 120, 'Lava Portal [E]', () => this.travelTo('lava'), 0xff3300);
-      this.addInteractable(520, 595, 150, 120, 'Frost Portal [E]', () => this.travelTo('frost'), 0x67d9ff);
-      this.addInteractable(760, 595, 150, 120, 'Ruin Portal [E]', () => this.travelTo('ruin'), 0xffd166);
-      this.addInteractable(1000, 595, 150, 120, 'Abyss Portal [E]', () => this.travelTo('abyss'), 0xba55d3);
-      this.addInteractable(1270, 595, 150, 120, 'Arena [E]', () => this.travelTo('arena'), 0xffffff);
-      this.addInteractable(1680, 592, 170, 120, 'Anvil NPC [E]', () => this.tryTerrainEvolution(), 0xffb642);
-      this.addInteractable(1930, 592, 170, 120, 'Supply NPC [E]', () => this.buyPotion(), 0x8be9fd);
+      this.addInteractable(280, 595, 150, 120, '용암 지대 [E]', () => this.travelTo('lava'), 0xff3300);
+      this.addInteractable(520, 595, 150, 120, '서리 지대 [E]', () => this.travelTo('frost'), 0x67d9ff);
+      this.addInteractable(760, 595, 150, 120, '유적 지대 [E]', () => this.travelTo('ruin'), 0xffd166);
+      this.addInteractable(1000, 595, 150, 120, '심연 지대 [E]', () => this.travelTo('abyss'), 0xba55d3);
+      this.addInteractable(1270, 595, 150, 120, '훈련장 [E]', () => this.travelTo('arena'), 0xffffff);
+      this.addInteractable(1680, 592, 170, 120, '대장장이 [E]', () => this.tryTerrainEvolution(), 0xffb642);
+      this.addInteractable(1930, 592, 170, 120, '보급 상인 [E]', () => this.buyPotion(), 0x8be9fd);
     }
 
     buildArena() {
       this.addPlatform(650, 535, 250, 28, 0x30384a);
       this.addPlatform(1800, 520, 350, 28, 0x30384a);
-      this.addInteractable(120, 594, 130, 120, 'Town [E]', () => this.travelTo('town'), 0xffffff);
+      this.addInteractable(120, 594, 130, 120, '마을 [E]', () => this.travelTo('town'), 0xffffff);
     }
 
     buildTerrainZone(zoneId) {
-      this.addInteractable(110, 594, 130, 120, 'Town [E]', () => this.travelTo('town'), 0xffffff);
+      this.addInteractable(110, 594, 130, 120, '마을 [E]', () => this.travelTo('town'), 0xffffff);
       this.addPlatform(650, 535, 280, 28, 0x2c3448);
       this.addPlatform(1160, 470, 260, 28, 0x2c3448);
       this.addPlatform(1700, 545, 310, 28, 0x2c3448);
@@ -513,16 +710,16 @@
       this.addHazard(925, 632, 300, 35);
       this.addHazard(1505, 632, 260, 35);
       this.addHazard(2600, 632, 420, 35);
-      this.add.text(2870, 585, 'Boss Gate: kill 10 mobs', { fontFamily: 'Consolas', fontSize: '16px', color: '#fff', stroke: '#000', strokeThickness: 4 });
+      this.add.text(2870, 585, '보스 관문: 몬스터 10마리 처치', { fontFamily: 'Consolas', fontSize: '16px', color: '#fff', stroke: '#000', strokeThickness: 4 });
     }
 
     createPlayer() {
       const startX = save.zone === 'town' ? 150 : 135;
-      this.player = this.physics.add.sprite(startX, 520, 'player');
+      this.player = this.physics.add.sprite(startX, 520, this.getPlayerTextureKey());
       this.player.setCollideWorldBounds(true);
       this.player.setDragX(1500);
       this.player.setMaxVelocity(720, 900);
-      this.player.body.setSize(30, 52).setOffset(5, 6);
+      this.player.body.setSize(34, 62).setOffset(19, 24);
       this.facing = 1;
       this.refreshPlayerIdentity(false);
     }
@@ -533,16 +730,32 @@
         this.playerHp = this.stats.hp;
         this.playerMp = this.stats.mp;
       }
-      const baseColor = save.path === 'mythic' ? 0xba55d3 : save.path === 'terrain' ? Number(`0x${TERRAIN_JOBS[save.terrain].aura.slice(1)}`) : BASE_CLASSES[save.baseClass]?.color || 0xffffff;
-      this.player.setTint(baseColor);
+      this.player.setTexture(this.getPlayerTextureKey());
+      this.player.clearTint();
+      if (save.path === 'terrain' && save.terrain) {
+        const terrainColor = Number(`0x${TERRAIN_JOBS[save.terrain].aura.slice(1)}`);
+        this.player.setTint(terrainColor);
+        this.ensurePlayerAura(terrainColor);
+      } else {
+        if (this.playerAura) this.playerAura.setVisible(false);
+      }
       if (save.path === 'mythic') this.createShadowTwin();
+      else if (this.shadowTwin) this.shadowTwin.setVisible(false);
       renderSkills(this);
       updateHud(this);
+      updateProfileUi();
     }
 
+    ensurePlayerAura(color) {
+      if (!this.playerAura) {
+        this.playerAura = this.add.circle(this.player.x, this.player.y, 47, color, 0.15).setDepth(4);
+        this.playerAura.setStrokeStyle(2, color, 0.55);
+      }
+      this.playerAura.setFillStyle(color, 0.15).setStrokeStyle(2, color, 0.55).setVisible(true);
+    }
     createShadowTwin() {
       if (this.shadowTwin) this.shadowTwin.destroy();
-      this.shadowTwin = this.add.sprite(this.player.x - 18, this.player.y, 'player').setTint(0xba55d3).setAlpha(0.32);
+      this.shadowTwin = this.add.sprite(this.player.x - 18, this.player.y, this.getPlayerTextureKey()).setTint(0xba55d3).setAlpha(0.32);
       this.shadowTwin.setDepth(this.player.depth - 1);
     }
 
@@ -555,7 +768,7 @@
 
     spawnZoneEnemies() {
       if (save.zone === 'town') {
-        this.spawnEnemy(2350, 510, { name: 'Training Dummy', hp: 999, atk: 0, exp: 0, gold: 0, tint: 0xeeeeee, dummy: true });
+        this.spawnEnemy(2350, 510, { name: '훈련용 허수아비', hp: 999, atk: 0, exp: 0, gold: 0, tint: 0xeeeeee, dummy: true });
         return;
       }
       if (save.zone === 'arena') {
@@ -736,7 +949,9 @@
     }
 
     updateEffects(time) {
+      if (this.playerAura?.visible) this.playerAura.setPosition(this.player.x, this.player.y + 2);
       if (this.shadowTwin) {
+        this.shadowTwin.setTexture(this.getPlayerTextureKey());
         this.shadowTwin.setPosition(Phaser.Math.Linear(this.shadowTwin.x, this.player.x - this.facing * 18, 0.22), Phaser.Math.Linear(this.shadowTwin.y, this.player.y + 4, 0.22));
         this.shadowTwin.setFlipX(this.player.flipX);
         this.shadowTwin.setVisible(save.path === 'mythic');
@@ -782,12 +997,22 @@
     }
 
     buyPotion() {
-      if (save.gold < 30) { toast('골드 부족'); return; }
+      if (save.gold < 30) { toast('골드가 부족합니다'); return; }
       save.gold -= 30;
       addItem({ name: 'Field Potion', rarity: 'Common', type: 'consumable', desc: '판매하거나 나중에 회복 시스템 확장에 사용' });
       updateHud(this);
     }
 
+    onPlayerEnemyOverlap(enemy) {
+      const data = enemy?.getData?.('enemy');
+      if (!data || data.dead || data.dummy) return;
+      if (this.time.now < (data.contactDamageAt || 0)) return;
+      data.contactDamageAt = this.time.now + 850;
+      const push = Math.sign(this.player.x - enemy.x) || 1;
+      this.player.setVelocityX(push * 240);
+      this.player.setVelocityY(Math.min(this.player.body.velocity.y, -120));
+      this.damagePlayer(Math.max(1, Math.round((data.atk || 1) * 0.45)), data.name);
+    }
     monsterAttack(enemy) {
       const data = enemy.getData('enemy');
       const damage = data.boss ? data.atk : data.atk + save.level;
@@ -1018,7 +1243,7 @@
     setCombo(value) {
       this.comboCount = value;
       const tracker = $('comboTracker');
-      tracker.textContent = `${value} Combo`;
+      tracker.textContent = `${value} 콤보`;
       tracker.classList.toggle('visible', value > 0);
       tracker.style.transform = value > 0 ? `scale(${1 + Math.min(value, 40) * 0.012})` : 'scale(0)';
     }
@@ -1064,10 +1289,10 @@
     rollLoot(boss) {
       if (Math.random() < 0.0005) { this.addMythicDrop(); return; }
       const roll = Math.random();
-      if (roll < 0.05) addItem({ name: 'Legendary Relic', rarity: 'Legendary', type: 'treasure', desc: '높은 가격에 판매 가능' });
-      else if (roll < 0.14) addItem({ name: 'Epic Gem', rarity: 'Epic', type: 'treasure', desc: '판매용 보석' });
-      else if (roll < 0.34) addItem({ name: 'Rare Alloy', rarity: 'Rare', type: 'treasure', desc: '판매용 재료' });
-      else if (roll < 0.62) addItem({ name: 'Monster Scrap', rarity: 'Common', type: 'treasure', desc: '판매용 잡동사니' });
+      if (roll < 0.05) addItem({ name: '전설 유물', rarity: 'Legendary', type: 'treasure', desc: '높은 가격에 판매 가능' });
+      else if (roll < 0.14) addItem({ name: '영웅 보석', rarity: 'Epic', type: 'treasure', desc: '판매용 보석' });
+      else if (roll < 0.34) addItem({ name: '희귀 합금', rarity: 'Rare', type: 'treasure', desc: '판매용 재료' });
+      else if (roll < 0.62) addItem({ name: '몬스터 파편', rarity: 'Common', type: 'treasure', desc: '판매용 잡동사니' });
     }
 
     addMythicDrop() {
@@ -1110,8 +1335,8 @@
     useSkill(key, time) {
       const skill = getActiveSkills().find((entry) => entry.key === key);
       if (!skill) return;
-      if ((this.cooldowns[key] || 0) > time) { toast('쿨다운 중'); return; }
-      if (this.playerMp < skill.mp) { toast('MP 부족'); return; }
+      if ((this.cooldowns[key] || 0) > time) { toast('아직 재사용 대기 중입니다'); return; }
+      if (this.playerMp < skill.mp) { toast('마나가 부족합니다'); return; }
       this.playerMp -= skill.mp;
       if (skill.cd > 0) this.cooldowns[key] = time + skill.cd;
       this.nextAttackAt = Math.min(this.nextAttackAt, time + 80);
@@ -1214,7 +1439,7 @@
 
     shadowStrike() {
       const target = this.nearestEnemy(300);
-      if (!target) { toast('대상 없음'); return; }
+      if (!target) { toast('범위 안에 대상이 없습니다'); return; }
       const stealth = (this.buffs.stealthUntil || 0) > this.time.now;
       this.player.setPosition(target.x - this.facing * 46, target.y);
       this.applyDamage(target, this.calculateDamage(stealth ? 4.0 : 2.0), { critBonus: stealth ? 1 : 0, popupColor: '#ba55d3' });
@@ -1398,4 +1623,9 @@
 
   window.addEventListener('beforeunload', saveGame);
 })();
+
+
+
+
+
 
