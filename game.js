@@ -467,6 +467,49 @@
       if ($('registerButton')) $('registerButton').style.display = isRegister ? 'inline-flex' : 'none';
       if (accountPasswordInput) accountPasswordInput.autocomplete = isRegister ? 'new-password' : 'current-password';
     };
+    let selectingClass = false;
+    const persistSaveDirectly = () => {
+      localStorage.setItem(currentAccountId ? accountSaveKey(currentAccountId) : SAVE_KEY, JSON.stringify(save));
+    };
+    const selectBaseClass = (classId) => {
+      if (selectingClass || !BASE_CLASSES[classId]) return;
+      selectingClass = true;
+      const playerName = save.playerName || cleanDisplayName(playerNameInput?.value || '') || getCurrentAccount()?.playerName || '플레이어';
+      save = freshSave();
+      save.playerName = playerName;
+      save.baseClass = classId;
+      const stats = getBaseStats();
+      save.hp = stats.hp;
+      save.mp = stats.mp;
+      save.inventory.push({ id: `starter-${Date.now()}`, name: '초보자의 보급품', rarity: 'Common', type: 'consumable', desc: '초반 자금용 보급품' });
+      persistSaveDirectly();
+      $('classModal')?.classList.remove('visible');
+      hideStartScreen();
+      AudioFX.playUiSound();
+      updateProfileUi();
+      renderInventory();
+      toast(`${BASE_CLASSES[classId].title} 생성 완료`);
+      if (activeScene) activeScene.scene.restart();
+      setTimeout(() => { selectingClass = false; }, 250);
+    };
+    const renderClassChoices = () => {
+      const classChoices = $('classChoices');
+      if (!classChoices) return;
+      classChoices.innerHTML = Object.entries(BASE_CLASSES).map(([id, data]) => `
+        <button class="choice-card" data-class="${id}" type="button">
+          <div class="paper-doll ${id}"><span class="weapon"></span></div>
+          <h3>${data.title}</h3>
+          <p>${data.desc}</p>
+        </button>`).join('');
+      classChoices.querySelectorAll('[data-class]').forEach((button) => {
+        button.addEventListener('click', (event) => {
+          event.preventDefault();
+          selectBaseClass(button.dataset.class);
+        });
+      });
+    };
+    renderClassChoices();
+
     const startSession = (accountId) => {
       currentAccountId = accountId;
       localStorage.setItem(SESSION_KEY, accountId);
@@ -521,7 +564,8 @@
         if (event.key === 'Enter') (document.activeElement === playerNameInput ? registerLocalAccount : loginLocalAccount)();
       });
     });
-    setAuthMode('login');    $('continueButton')?.addEventListener('click', () => {
+    setAuthMode('login');
+    $('continueButton')?.addEventListener('click', () => {
       if (!save.baseClass) { showClassSelect(); return; }
       hideStartScreen();
       AudioFX.playUiSound();
