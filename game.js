@@ -186,7 +186,8 @@
 
   function loadSave() {
     try {
-      const raw = localStorage.getItem(currentAccountId ? accountSaveKey(currentAccountId) : SAVE_KEY);
+      if (!currentAccountId) return freshSave();
+      const raw = localStorage.getItem(accountSaveKey(currentAccountId));
       if (!raw) return freshSave();
       return { ...freshSave(), ...JSON.parse(raw) };
     } catch (error) {
@@ -201,8 +202,9 @@
   const touchState = {};
 
   function saveGame() {
+    if (!currentAccountId) return;
     if (activeScene) activeScene.syncSaveFromPlayer();
-    localStorage.setItem(currentAccountId ? accountSaveKey(currentAccountId) : SAVE_KEY, JSON.stringify(save));
+    localStorage.setItem(accountSaveKey(currentAccountId), JSON.stringify(save));
   }
 
   function toast(message) {
@@ -340,17 +342,18 @@
   }
 
   function updateProfileUi() {
-    const name = save.playerName || '게스트';
-    const info = save.baseClass ? `${getJobTitle()} · Lv.${save.level} · ${save.gold}골드` : '캐릭터 생성 필요';
+    const loggedIn = !!currentAccountId && !!save.playerName;
+    const name = loggedIn ? save.playerName : '로그인 필요';
+    const info = loggedIn ? (save.baseClass ? `${getJobTitle()} · Lv.${save.level} · ${save.gold}골드 · ${currentAccountId}` : `캐릭터 생성 필요 · ${currentAccountId}`) : '계정을 만들거나 로그인하세요';
     if ($('profileNameText')) $('profileNameText').textContent = name;
-    if ($('equippedText')) $('equippedText').textContent = getEquippedLabel();
+    if ($('equippedText')) $('equippedText').textContent = loggedIn ? getEquippedLabel() : '로그인 후 장비 표시';
     if ($('menuProfileName')) $('menuProfileName').textContent = name;
     if ($('menuProfileInfo')) $('menuProfileInfo').textContent = info;
     setPaperDoll('hudAvatar');
     setPaperDoll('menuAvatar');
-    if ($('loginPanel')) $('loginPanel').style.display = save.playerName ? 'none' : 'block';
-    if ($('mainMenu')) $('mainMenu').classList.toggle('visible', !!save.playerName);
-    if ($('continueButton')) $('continueButton').disabled = !save.baseClass;
+    if ($('loginPanel')) $('loginPanel').style.display = loggedIn ? 'none' : 'block';
+    if ($('mainMenu')) $('mainMenu').classList.toggle('visible', loggedIn);
+    if ($('continueButton')) $('continueButton').disabled = !loggedIn || !save.baseClass;
   }
 
   function hideStartScreen() {
@@ -365,6 +368,11 @@
   }
 
   function showClassSelect() {
+    if (!currentAccountId || !save.playerName) {
+      showStartScreen();
+      toast('먼저 로그인하거나 계정을 만들어주세요.');
+      return;
+    }
     if ($('classModal')) $('classModal').classList.add('visible');
     if (activeScene) activeScene.physics.pause();
   }
@@ -555,11 +563,30 @@
       toast(save.baseClass ? '로그인 완료. 이어하기를 누르세요.' : '로그인 완료. 직업을 선택하세요.');
       if (!save.baseClass) showClassSelect();
     };
+    const switchAccount = () => {
+      if (currentAccountId) saveGame();
+      currentAccountId = '';
+      localStorage.removeItem(SESSION_KEY);
+      save = freshSave();
+      if (accountPasswordInput) accountPasswordInput.value = '';
+      if (playerNameInput) playerNameInput.value = '';
+      setAuthMode('login');
+      $('classModal')?.classList.remove('visible');
+      $('inventoryModal')?.classList.remove('visible');
+      showStartScreen();
+      renderInventory();
+      updateProfileUi();
+      toast('로그아웃 완료. 다른 계정으로 로그인하세요.');
+      if (activeScene) activeScene.scene.restart();
+    };
     $('showLoginButton')?.addEventListener('click', () => setAuthMode('login'));
     $('showRegisterButton')?.addEventListener('click', () => setAuthMode('register'));
     $('loginButton')?.addEventListener('click', loginLocalAccount);
     $('registerButton')?.addEventListener('click', registerLocalAccount);
-    [accountIdInput, accountPasswordInput, playerNameInput].forEach((input) => {
+    $('switchAccountButton')?.addEventListener('click', switchAccount);
+    $('hudAccountButton')?.addEventListener('click', () => {
+      if (!currentAccountId || confirm('현재 계정에서 로그아웃하고 계정 전환 화면으로 갈까요?')) switchAccount();
+    });    [accountIdInput, accountPasswordInput, playerNameInput].forEach((input) => {
       input?.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') (document.activeElement === playerNameInput ? registerLocalAccount : loginLocalAccount)();
       });
