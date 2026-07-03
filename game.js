@@ -2,10 +2,13 @@
   'use strict';
 
   const SAVE_KEY = 'mythic-terrain-rpg-save-v1';
+  const ACCOUNT_KEY = 'mythic-terrain-rpg-accounts-v1';
+  const SESSION_KEY = 'mythic-terrain-rpg-session-v1';
   const ITEM_VALUES = { Common: 10, Rare: 50, Epic: 120, Legendary: 200, Mythic: 1000 };
   const KEYS = ['Z', 'C', 'V', 'R'];
   const clamp = Phaser.Math.Clamp;
   const $ = (id) => document.getElementById(id);
+  let currentAccountId = localStorage.getItem(SESSION_KEY) || '';
 
   const BASE_CLASSES = {
     berserker: {
@@ -151,9 +154,39 @@
     };
   }
 
+  function normalizeAccountId(value) {
+    return (value || '').trim().toLowerCase().replace(/\s+/g, '');
+  }
+
+  function cleanDisplayName(value) {
+    return (value || '').replace(/\s+/g, ' ').trim().slice(0, 16);
+  }
+
+  function loadAccounts() {
+    try {
+      return JSON.parse(localStorage.getItem(ACCOUNT_KEY) || '{}');
+    } catch (error) {
+      console.warn('Account parse failed', error);
+      return {};
+    }
+  }
+
+  function saveAccounts(accounts) {
+    localStorage.setItem(ACCOUNT_KEY, JSON.stringify(accounts));
+  }
+
+  function accountSaveKey(accountId = currentAccountId) {
+    return `${SAVE_KEY}:account:${accountId}`;
+  }
+
+  function getCurrentAccount() {
+    const accounts = loadAccounts();
+    return currentAccountId ? accounts[currentAccountId] : null;
+  }
+
   function loadSave() {
     try {
-      const raw = localStorage.getItem(SAVE_KEY);
+      const raw = localStorage.getItem(currentAccountId ? accountSaveKey(currentAccountId) : SAVE_KEY);
       if (!raw) return freshSave();
       return { ...freshSave(), ...JSON.parse(raw) };
     } catch (error) {
@@ -169,7 +202,7 @@
 
   function saveGame() {
     if (activeScene) activeScene.syncSaveFromPlayer();
-    localStorage.setItem(SAVE_KEY, JSON.stringify(save));
+    localStorage.setItem(currentAccountId ? accountSaveKey(currentAccountId) : SAVE_KEY, JSON.stringify(save));
   }
 
   function toast(message) {
@@ -418,52 +451,84 @@
     });
   }
   function setupDom() {
-    const classChoices = $('classChoices');
-    classChoices.innerHTML = Object.entries(BASE_CLASSES).map(([id, data]) => `
-      <button class="choice-card" data-class="${id}">
-        <div class="paper-doll ${id}"><span class="weapon"></span></div>
-        <h3>${data.title}</h3>
-        <p>${data.desc}</p>
-      </button>`).join('');
-    classChoices.querySelectorAll('[data-class]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const playerName = save.playerName || $('playerNameInput')?.value?.trim() || '플레이어';
-        save = freshSave();
-        save.playerName = playerName;
-        save.baseClass = button.dataset.class;
-        const stats = getBaseStats();
-        save.hp = stats.hp;
-        save.mp = stats.mp;
-        save.inventory.push({ id: `starter-${Date.now()}`, name: '초보자의 보급품', rarity: 'Common', type: 'consumable', desc: '초반 자금용 보급품' });
-        saveGame();
-        $('classModal').classList.remove('visible');
-        hideStartScreen();
-        AudioFX.playUiSound();
-        updateProfileUi();
-        if (activeScene) activeScene.scene.restart();
-      });
+    document.querySelectorAll('input, textarea, select').forEach((input) => {
+      ['keydown', 'keyup', 'keypress'].forEach((type) => input.addEventListener(type, (event) => event.stopPropagation()));
     });
 
-    $('loginButton')?.addEventListener('click', () => {
-      const name = $('playerNameInput').value.trim();
-      if (!name) { toast('닉네임을 입력하세요.'); return; }
-      save.playerName = name;
+    const accountIdInput = $('accountIdInput');
+    const accountPasswordInput = $('accountPasswordInput');
+    const playerNameInput = $('playerNameInput');
+    const setAuthMode = (mode) => {
+      const isRegister = mode === 'register';
+      $('showLoginButton')?.classList.toggle('active', !isRegister);
+      $('showRegisterButton')?.classList.toggle('active', isRegister);
+      if ($('registerNameWrap')) $('registerNameWrap').style.display = isRegister ? 'block' : 'none';
+      if ($('loginButton')) $('loginButton').style.display = isRegister ? 'none' : 'inline-flex';
+      if ($('registerButton')) $('registerButton').style.display = isRegister ? 'inline-flex' : 'none';
+      if (accountPasswordInput) accountPasswordInput.autocomplete = isRegister ? 'new-password' : 'current-password';
+    };
+    const startSession = (accountId) => {
+      currentAccountId = accountId;
+      localStorage.setItem(SESSION_KEY, accountId);
+      save = loadSave();
+      const account = getCurrentAccount();
+      if (!save.playerName) save.playerName = account?.playerName || accountId;
       saveGame();
-      AudioFX.playUiSound();
       updateProfileUi();
+      renderInventory();
+      AudioFX.playUiSound();
+      if (activeScene) activeScene.scene.restart();
+    };
+    const registerLocalAccount = () => {
+      const accountId = normalizeAccountId(accountIdInput?.value);
+      const password = accountPasswordInput?.value || '';
+      const playerName = cleanDisplayName(playerNameInput?.value || '');
+      if (accountId.length < 3) { toast('아이디는 3글자 이상 입력하세요.'); return; }
+      if (password.length < 4) { toast('비밀번호는 4글자 이상 입력하세요.'); return; }
+      if (!playerName) { toast('캐릭터 표시 이름을 입력하세요.'); return; }
+      const accounts = loadAccounts();
+      if (accounts[accountId]) { toast('이미 존재하는 계정입니다.'); return; }
+      accounts[accountId] = { password, playerName, createdAt: Date.now() };
+      saveAccounts(accounts);
+      currentAccountId = accountId;
+      localStorage.setItem(SESSION_KEY, accountId);
+      save = freshSave();
+      save.playerName = playerName;
+      localStorage.setItem(accountSaveKey(accountId), JSON.stringify(save));
+      updateProfileUi();
+      renderInventory();
+      AudioFX.playUiSound();
+      toast('계정 생성 완료. 직업을 선택하세요.');
+      showClassSelect();
+      if (activeScene) activeScene.scene.restart();
+    };
+    const loginLocalAccount = () => {
+      const accountId = normalizeAccountId(accountIdInput?.value);
+      const password = accountPasswordInput?.value || '';
+      const accounts = loadAccounts();
+      if (!accounts[accountId]) { toast('없는 계정입니다. 계정 만들기를 눌러주세요.'); return; }
+      if (accounts[accountId].password !== password) { toast('비밀번호가 맞지 않습니다.'); return; }
+      startSession(accountId);
+      toast(save.baseClass ? '로그인 완료. 이어하기를 누르세요.' : '로그인 완료. 직업을 선택하세요.');
       if (!save.baseClass) showClassSelect();
+    };
+    $('showLoginButton')?.addEventListener('click', () => setAuthMode('login'));
+    $('showRegisterButton')?.addEventListener('click', () => setAuthMode('register'));
+    $('loginButton')?.addEventListener('click', loginLocalAccount);
+    $('registerButton')?.addEventListener('click', registerLocalAccount);
+    [accountIdInput, accountPasswordInput, playerNameInput].forEach((input) => {
+      input?.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') (document.activeElement === playerNameInput ? registerLocalAccount : loginLocalAccount)();
+      });
     });
-    $('playerNameInput')?.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') $('loginButton').click();
-    });
-    $('continueButton')?.addEventListener('click', () => {
+    setAuthMode('login');    $('continueButton')?.addEventListener('click', () => {
       if (!save.baseClass) { showClassSelect(); return; }
       hideStartScreen();
       AudioFX.playUiSound();
     });
     $('newGameButton')?.addEventListener('click', () => {
       if (save.baseClass && !confirm('기존 캐릭터를 지우고 새로 시작할까요?')) return;
-      const playerName = save.playerName || $('playerNameInput')?.value?.trim() || '플레이어';
+      const playerName = save.playerName || cleanDisplayName($('playerNameInput')?.value || '') || getCurrentAccount()?.playerName || '플레이어';
       save = freshSave();
       save.playerName = playerName;
       saveGame();
@@ -475,10 +540,19 @@
     $('closeInventory').addEventListener('click', () => $('inventoryModal').classList.remove('visible'));
     $('saveButton').addEventListener('click', () => { saveGame(); toast('저장 완료'); });
     $('resetButton').addEventListener('click', () => {
-      if (!confirm('저장 데이터를 초기화할까요?')) return;
-      localStorage.removeItem(SAVE_KEY);
+      if (!confirm('현재 캐릭터 데이터를 초기화할까요? 계정은 유지됩니다.')) return;
+      const account = getCurrentAccount();
+      const playerName = account?.playerName || save.playerName || '';
+      localStorage.removeItem(currentAccountId ? accountSaveKey(currentAccountId) : SAVE_KEY);
       save = freshSave();
-      location.reload();
+      save.playerName = playerName;
+      if (currentAccountId) localStorage.setItem(accountSaveKey(currentAccountId), JSON.stringify(save));
+      renderInventory();
+      updateProfileUi();
+      toast('캐릭터 정보 초기화 완료');
+      if (save.playerName) showClassSelect();
+      else showStartScreen();
+      if (activeScene) activeScene.scene.restart();
     });
     document.addEventListener('pointerdown', () => AudioFX.unlock(), { once: true });
     document.addEventListener('keydown', () => AudioFX.unlock(), { once: true });
@@ -538,6 +612,8 @@
         left: 'A', right: 'D', jump: 'SPACE', attack: 'X', skillZ: 'Z', skillC: 'C', skillV: 'V', skillR: 'R', interact: 'E', inventory: 'I'
       });
       this.cursors = this.input.keyboard.createCursorKeys();
+      this.input.mouse?.disableContextMenu();
+      this.input.on('pointerdown', (pointer) => this.handlePointerAttack(pointer));
       this.cameras.main.startFollow(this.player, true, 0.08, 0.08, 0, 90);
       renderSkills(this);
       renderInventory();
@@ -577,6 +653,37 @@
         g.fillStyle(palette.hair, 1).fillTriangle(25, 18, 18, 32, 30, 23).fillTriangle(48, 18, 54, 32, 42, 23);
         g.fillStyle(0xffffff, 0.95).fillRect(31, 18, 3, 2).fillRect(40, 18, 3, 2);
         g.fillStyle(palette.trim, 1).fillCircle(21, 35, 5).fillCircle(51, 35, 5);
+        if (weapon === 'sword') {
+          g.fillStyle(0x2a0d0d, 1).fillTriangle(24, 10, 12, 1, 27, 5).fillTriangle(48, 10, 60, 1, 45, 5);
+          g.fillStyle(0x151015, 1).fillTriangle(18, 34, 6, 27, 14, 47).fillTriangle(54, 34, 66, 27, 58, 47);
+          g.lineStyle(3, 0xffd166, 0.95).strokeCircle(36, 46, 8);
+          g.fillStyle(0xff3b30, 0.9).fillCircle(36, 46, 4);
+        } else if (weapon === 'bow') {
+          g.fillStyle(0x0d2534, 0.95).fillTriangle(36, 2, 17, 26, 55, 26);
+          g.fillStyle(0xd4f1ff, 0.95).fillRect(27, 20, 18, 3);
+          g.fillStyle(0x0a1118, 1).fillRoundedRect(10, 25, 8, 37, 4);
+          g.lineStyle(2, 0xd4f1ff, 0.85).lineBetween(12, 23, 7, 9).lineBetween(15, 25, 12, 8).lineBetween(17, 29, 17, 10);
+        } else if (weapon === 'staff') {
+          g.fillStyle(0x2a1847, 1).fillTriangle(36, -2, 20, 24, 52, 24);
+          g.lineStyle(3, 0xe9d6ff, 0.9).lineBetween(36, -2, 20, 24).lineBetween(20, 24, 52, 24).lineBetween(52, 24, 36, -2);
+          g.fillStyle(0xb388ff, 0.65).fillCircle(15, 35, 5).fillCircle(57, 50, 4).fillCircle(18, 59, 3);
+          g.lineStyle(2, 0xffffff, 0.55).strokeCircle(36, 44, 18);
+        } else if (weapon === 'daggers') {
+          g.fillStyle(0x07100c, 1).fillRoundedRect(24, 16, 24, 11, 5);
+          g.fillStyle(0x8aff80, 1).fillRect(30, 20, 5, 2).fillRect(39, 20, 5, 2);
+          g.fillStyle(0x11251b, 0.95).fillTriangle(49, 26, 68, 31, 50, 39);
+          g.lineStyle(2, 0x8aff80, 0.7).lineBetween(18, 62, 4, 77).lineBetween(54, 62, 68, 77);
+        } else if (weapon === 'scythe') {
+          g.fillStyle(0x050306, 0.98).fillTriangle(36, 2, 17, 31, 55, 31);
+          g.fillStyle(0xd7c8ff, 0.9).fillRoundedRect(29, 15, 14, 11, 5);
+          g.fillStyle(0xba55d3, 0.58).fillCircle(16, 29, 4).fillCircle(58, 57, 5).fillCircle(12, 68, 3);
+          g.lineStyle(2, 0xba55d3, 0.75).strokeCircle(36, 45, 25);
+        } else if (weapon === 'chrono') {
+          g.lineStyle(3, 0x67d9ff, 0.9).strokeCircle(36, 18, 17);
+          g.lineStyle(2, 0xffffff, 0.75).lineBetween(36, 18, 36, 8).lineBetween(36, 18, 46, 22);
+          g.fillStyle(0x67d9ff, 0.78).fillCircle(17, 31, 4).fillCircle(56, 56, 4).fillCircle(19, 66, 3).fillCircle(52, 28, 3);
+          g.lineStyle(2, 0x67d9ff, 0.55).strokeRoundedRect(18, 28, 36, 41, 8);
+        }
         if (weapon === 'sword') {
           g.lineStyle(8, 0xd7e4ff, 1).lineBetween(53, 15, 58, 78);
           g.lineStyle(2, 0x111111, 0.9).lineBetween(53, 15, 58, 78);
@@ -716,6 +823,7 @@
     createPlayer() {
       const startX = save.zone === 'town' ? 150 : 135;
       this.player = this.physics.add.sprite(startX, 520, this.getPlayerTextureKey());
+      this.player.setScale(1.08);
       this.player.setCollideWorldBounds(true);
       this.player.setDragX(1500);
       this.player.setMaxVelocity(720, 900);
@@ -735,9 +843,10 @@
       if (save.path === 'terrain' && save.terrain) {
         const terrainColor = Number(`0x${TERRAIN_JOBS[save.terrain].aura.slice(1)}`);
         this.player.setTint(terrainColor);
-        this.ensurePlayerAura(terrainColor);
+        this.ensurePlayerAura(terrainColor, 0.18);
       } else {
-        if (this.playerAura) this.playerAura.setVisible(false);
+        const classColor = save.path === 'mythic' ? (save.mythic === 'chrono' ? 0x67d9ff : 0xba55d3) : (BASE_CLASSES[save.baseClass]?.color || 0xffd166);
+        this.ensurePlayerAura(classColor, save.path === 'mythic' ? 0.16 : 0.09);
       }
       if (save.path === 'mythic') this.createShadowTwin();
       else if (this.shadowTwin) this.shadowTwin.setVisible(false);
@@ -746,12 +855,12 @@
       updateProfileUi();
     }
 
-    ensurePlayerAura(color) {
+    ensurePlayerAura(color, alpha = 0.15) {
       if (!this.playerAura) {
-        this.playerAura = this.add.circle(this.player.x, this.player.y, 47, color, 0.15).setDepth(4);
+        this.playerAura = this.add.circle(this.player.x, this.player.y, 52, color, alpha).setDepth(4);
         this.playerAura.setStrokeStyle(2, color, 0.55);
       }
-      this.playerAura.setFillStyle(color, 0.15).setStrokeStyle(2, color, 0.55).setVisible(true);
+      this.playerAura.setRadius(52).setFillStyle(color, alpha).setStrokeStyle(2, color, 0.55).setVisible(true);
     }
     createShadowTwin() {
       if (this.shadowTwin) this.shadowTwin.destroy();
@@ -843,6 +952,7 @@
       const right = this.keys.right.isDown || this.cursors.right.isDown || touchState.right;
       const jumpPressed = this.justPressed('jump') || Phaser.Input.Keyboard.JustDown(this.cursors.up);
       const attackPressed = this.justPressed('attack');
+      if (this.isTypingInField()) return;
       if (left) { this.player.setVelocityX(-this.stats.speed * this.buffSpeedMultiplier()); this.facing = -1; this.player.setFlipX(true); }
       else if (right) { this.player.setVelocityX(this.stats.speed * this.buffSpeedMultiplier()); this.facing = 1; this.player.setFlipX(false); }
       else this.player.setVelocityX(0);
@@ -866,6 +976,26 @@
       const keyboard = this.keys[name] ? Phaser.Input.Keyboard.JustDown(this.keys[name]) : false;
       const touch = !!touchState[name] && !this.touchLast[name];
       return keyboard || touch;
+    }
+
+    isTypingInField() {
+      const active = document.activeElement;
+      return !!active && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName);
+    }
+
+    isPointerOverUi(pointer) {
+      const target = pointer?.event?.target;
+      return !!target && !!target.closest?.('#startScreen, .modal, .touch-controls, button, input, textarea, select');
+    }
+
+    handlePointerAttack(pointer) {
+      if (!this.player || !this.player.active || !save.baseClass) return;
+      if (this.isPointerOverUi(pointer) || this.isTypingInField()) return;
+      if (pointer.leftButtonDown()) {
+        this.facing = pointer.worldX < this.player.x ? -1 : 1;
+        this.player.setFlipX(this.facing < 0);
+        this.basicAttack(this.time.now);
+      }
     }
 
     buffSpeedMultiplier() {
@@ -1063,9 +1193,10 @@
       if (time < this.nextAttackAt) return;
       this.comboStep = time - (this.lastBasicAt || 0) > 700 ? 1 : (this.comboStep % 3) + 1;
       this.lastBasicAt = time;
-      this.nextAttackAt = time + (save.baseClass === 'assassin' ? 170 : 230);
+      this.nextAttackAt = time + (save.baseClass === 'assassin' ? 135 : 185);
+      this.createBasicSwingFx(this.comboStep);
       if (save.path === 'mythic') {
-        this.spawnHitbox({ w: 105, h: 76, offsetX: 62, mult: 2.4, lifetime: 105, knockback: 210, element: 'mythic' });
+        this.spawnHitbox({ w: 118, h: 84, offsetX: 68, mult: 2.8, lifetime: 115, knockback: 245, element: 'mythic' });
         return;
       }
       const cls = save.baseClass;
@@ -1076,28 +1207,28 @@
     }
 
     berserkerBasic(step) {
-      const table = [null, { w: 64, h: 48, mult: 1, stun: 100 }, { w: 64, h: 64, mult: 1.2, lift: -50 }, { w: 80, h: 80, mult: 1.8, knockback: 250 }];
-      this.spawnHitbox({ ...table[step], offsetX: 56, lifetime: 120 });
+      const table = [null, { w: 86, h: 58, mult: 1.28, stun: 120 }, { w: 92, h: 72, mult: 1.55, lift: -60 }, { w: 112, h: 88, mult: 2.25, knockback: 310 }];
+      this.spawnHitbox({ ...table[step], offsetX: 66, lifetime: 130 });
     }
 
     sniperBasic(step) {
-      if (step === 1) this.spawnProjectile({ texture: 'arrow', speed: 600, mult: 0.8, pierce: 0 });
+      if (step === 1) this.spawnProjectile({ texture: 'arrow', speed: 700, mult: 1.1, pierce: 0 });
       if (step === 2) {
-        this.spawnProjectile({ texture: 'arrow', speed: 600, mult: 0.6, pierce: 0, offsetY: -8 });
-        this.spawnProjectile({ texture: 'arrow', speed: 600, mult: 0.6, pierce: 0, offsetY: 8 });
+        this.spawnProjectile({ texture: 'arrow', speed: 700, mult: 0.85, pierce: 0, offsetY: -8 });
+        this.spawnProjectile({ texture: 'arrow', speed: 700, mult: 0.85, pierce: 0, offsetY: 8 });
       }
-      if (step === 3) this.time.delayedCall(100, () => this.spawnProjectile({ texture: 'arrow', speed: 720, mult: 1.5, pierce: 2, scaleX: 1.8 }));
+      if (step === 3) this.time.delayedCall(70, () => this.spawnProjectile({ texture: 'arrow', speed: 820, mult: 1.95, pierce: 2, scaleX: 2.0 }));
     }
 
     sorcererBasic(step) {
-      if (step === 1) this.spawnProjectile({ texture: 'orb', speed: 400, mult: 0.9, splash: 20, tint: 0xff6a21, status: 'burn' });
-      if (step === 2) this.spawnProjectile({ texture: 'orb', speed: 450, mult: 0.9, tint: 0x9ae7ff, status: 'slow' });
-      if (step === 3) this.spawnProjectile({ texture: 'orb', speed: 550, mult: 1.2, tint: 0xfff06a, chain: 1, status: 'shock' });
+      if (step === 1) this.spawnProjectile({ texture: 'orb', speed: 460, mult: 1.18, splash: 28, tint: 0xff6a21, status: 'burn' });
+      if (step === 2) this.spawnProjectile({ texture: 'orb', speed: 500, mult: 1.18, tint: 0x9ae7ff, status: 'slow' });
+      if (step === 3) this.spawnProjectile({ texture: 'orb', speed: 610, mult: 1.58, tint: 0xfff06a, chain: 1, status: 'shock' });
     }
 
     assassinBasic(step) {
-      const table = [null, { w: 48, h: 32, mult: 0.7, lifetime: 70 }, { w: 56, h: 40, mult: 0.8, lifetime: 85 }, { w: 64, h: 48, mult: 1.3, lifetime: 110, critBonus: 0.1 }];
-      this.spawnHitbox({ ...table[step], offsetX: 43 });
+      const table = [null, { w: 66, h: 40, mult: 1.02, lifetime: 85 }, { w: 74, h: 48, mult: 1.16, lifetime: 95 }, { w: 86, h: 58, mult: 1.72, lifetime: 120, critBonus: 0.14, knockback: 180 }];
+      this.spawnHitbox({ ...table[step], offsetX: 52 });
     }
 
     spawnHitbox(options) {
@@ -1176,7 +1307,8 @@
     }
 
     calculateDamage(mult) {
-      return this.stats.atk * mult * terrainMultiplier();
+      const mythicBonus = save.path === 'mythic' ? 1.12 : 1;
+      return (this.stats.atk * mult + save.level * 1.7) * terrainMultiplier() * mythicBonus;
     }
 
     applyDamage(enemy, rawDamage, options = {}) {
@@ -1197,7 +1329,9 @@
       this.applyKnock(enemy, options);
       this.createDamagePopup(enemy.x, enemy.y - 40, damage, crit, options.popupColor);
       AudioFX[crit ? 'playCritSound' : 'playHitSound']();
+      this.createHitSparks(enemy.x, enemy.y - 8, crit, options.popupColor);
       if (crit) this.criticalJuice();
+      else this.normalHitJuice(enemy);
       this.setCombo(this.comboCount + 1);
       this.lastComboHitAt = this.time.now;
       if (this.buffs.deathShroudHeal) {
@@ -1227,7 +1361,7 @@
 
     createDamagePopup(x, y, value, crit, color) {
       const text = this.add.text(x, y, `${crit ? 'CRIT ' : ''}${value}`, {
-        fontFamily: crit ? 'Arial Black' : 'Arial', fontSize: crit ? '32px' : '20px', fontStyle: 'bold',
+        fontFamily: crit ? 'Arial Black' : 'Arial', fontSize: crit ? '36px' : '24px', fontStyle: 'bold',
         color: color || (crit ? '#ff2b2b' : '#ffffff'), stroke: '#000000', strokeThickness: crit ? 6 : 4
       }).setOrigin(0.5).setDepth(40);
       this.tweens.add({ targets: text, y: y - 55, x: x + Phaser.Math.Between(-24, 24), alpha: 0, duration: 600, ease: 'Quad.easeOut', onComplete: () => text.destroy() });
@@ -1602,6 +1736,48 @@
       this.tweens.add({ targets: line, alpha: 0, duration: 260, onComplete: () => line.destroy() });
     }
 
+    createBasicSwingFx(step) {
+      const color = this.hitboxColor({ element: save.path === 'mythic' ? 'mythic' : null });
+      const x = this.player.x + this.facing * (step === 3 ? 62 : 48);
+      const y = this.player.y - 2;
+      const angle = this.facing > 0 ? [-22, 8, 30][step - 1] : [202, 172, 150][step - 1];
+      const slash = this.add.ellipse(x, y, step === 3 ? 138 : 104, step === 3 ? 50 : 36, color, step === 3 ? 0.34 : 0.26)
+        .setAngle(angle)
+        .setDepth(24)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      const edge = this.add.rectangle(x + this.facing * 15, y - 2, step === 3 ? 116 : 84, 7, 0xffffff, 0.74)
+        .setAngle(angle)
+        .setDepth(25)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({ targets: [slash, edge], alpha: 0, scaleX: 1.45, scaleY: 1.18, duration: step === 3 ? 150 : 115, ease: 'Quad.easeOut', onComplete: () => { slash.destroy(); edge.destroy(); } });
+      this.tweens.add({ targets: this.player, scaleX: 1.06, scaleY: 0.96, duration: 55, yoyo: true });
+    }
+
+    createHitSparks(x, y, crit, color) {
+      const sparkColor = color ? Phaser.Display.Color.HexStringToColor(color).color : (crit ? 0xfff06a : 0xffffff);
+      const count = crit ? 14 : 8;
+      for (let i = 0; i < count; i += 1) {
+        const spark = this.add.rectangle(x, y, crit ? 18 : 12, crit ? 4 : 3, sparkColor, crit ? 0.95 : 0.78)
+          .setAngle(Phaser.Math.Between(0, 180))
+          .setDepth(32)
+          .setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({
+          targets: spark,
+          x: x + Phaser.Math.Between(-34, 34),
+          y: y + Phaser.Math.Between(-28, 24),
+          alpha: 0,
+          scaleX: 0.25,
+          duration: crit ? 260 : 190,
+          ease: 'Quad.easeOut',
+          onComplete: () => spark.destroy()
+        });
+      }
+    }
+
+    normalHitJuice(enemy) {
+      if (save.settings.shake) this.cameras.main.shake(55, 0.0045);
+      this.tweens.add({ targets: enemy, scaleX: 1.1, scaleY: 0.9, duration: 45, yoyo: true });
+    }
     createSlashFx(x, y, color) {
       const slash = this.add.rectangle(x, y, 120, 10, color, 0.75).setAngle(Phaser.Math.Between(-45, 45)).setDepth(25);
       this.tweens.add({ targets: slash, alpha: 0, scaleX: 1.6, duration: 160, onComplete: () => slash.destroy() });
@@ -1623,9 +1799,4 @@
 
   window.addEventListener('beforeunload', saveGame);
 })();
-
-
-
-
-
 

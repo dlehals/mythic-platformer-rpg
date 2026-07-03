@@ -17,7 +17,7 @@ Phaser 3 Arcade Physics 기반의 GitHub Pages용 정적 2D 액션 RPG입니다.
 
 - 이동: `A/D` 또는 방향키
 - 점프: `Space`
-- 공격: `X`
+- 평타: 마우스 좌클릭 또는 `X`
 - 스킬: `Z/C/V/R`
 - 상호작용: `E`
 - 인벤토리: `I`
