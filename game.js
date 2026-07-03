@@ -825,14 +825,14 @@
     buildZone(zoneId) {
       this.zone = ZONES[zoneId] || ZONES.town;
       this.cameras.main.setBackgroundColor(this.zone.color);
-      this.add.rectangle(1800, 680, 3600, 80, 0x1a1e29).setScrollFactor(1);
+      this.add.rectangle(1800, 560, 3600, 80, 0x1a1e29).setScrollFactor(1);
       this.add.text(28, 24, this.zone.title, { fontFamily: 'Consolas', fontSize: '28px', color: '#ffffff', stroke: '#000000', strokeThickness: 5 }).setScrollFactor(0);
       for (let i = 0; i < 16; i += 1) {
         const x = i * 260 + 80;
         const y = 90 + (i % 4) * 38;
         this.add.rectangle(x, y, 90 + (i % 3) * 32, 12, this.zone.accent, 0.14).setScrollFactor(0.35);
       }
-      this.addPlatform(1800, 660, 3600, 80, 0x202636);
+      this.addPlatform(1800, 540, 3600, 80, 0x202636);
       if (save.zone === 'town') this.buildTown();
       else if (save.zone === 'arena') this.buildArena();
       else this.buildTerrainZone(save.zone);
@@ -861,39 +861,39 @@
     }
 
     buildTown() {
-      this.addPlatform(560, 520, 230, 30, 0x2e3a50);
-      this.addPlatform(1120, 450, 260, 30, 0x2e3a50);
-      this.addPlatform(1650, 540, 260, 30, 0x2e3a50);
-      this.addInteractable(280, 595, 150, 120, '용암 지대 [E]', () => this.travelTo('lava'), 0xff3300);
-      this.addInteractable(520, 595, 150, 120, '서리 지대 [E]', () => this.travelTo('frost'), 0x67d9ff);
-      this.addInteractable(760, 595, 150, 120, '유적 지대 [E]', () => this.travelTo('ruin'), 0xffd166);
-      this.addInteractable(1000, 595, 150, 120, '심연 지대 [E]', () => this.travelTo('abyss'), 0xba55d3);
-      this.addInteractable(1270, 595, 150, 120, '훈련장 [E]', () => this.travelTo('arena'), 0xffffff);
-      this.addInteractable(1680, 592, 170, 120, '대장장이 [E]', () => this.tryTerrainEvolution(), 0xffb642);
-      this.addInteractable(1930, 592, 170, 120, '보급 상인 [E]', () => this.buyPotion(), 0x8be9fd);
+      this.addPlatform(560, 420, 230, 30, 0x2e3a50);
+      this.addPlatform(1120, 360, 260, 30, 0x2e3a50);
+      this.addPlatform(1650, 435, 260, 30, 0x2e3a50);
+      this.addInteractable(280, 475, 150, 120, '용암 지대 [E]', () => this.travelTo('lava'), 0xff3300);
+      this.addInteractable(520, 475, 150, 120, '서리 지대 [E]', () => this.travelTo('frost'), 0x67d9ff);
+      this.addInteractable(760, 475, 150, 120, '유적 지대 [E]', () => this.travelTo('ruin'), 0xffd166);
+      this.addInteractable(1000, 475, 150, 120, '심연 지대 [E]', () => this.travelTo('abyss'), 0xba55d3);
+      this.addInteractable(1270, 475, 150, 120, '훈련장 [E]', () => this.travelTo('arena'), 0xffffff);
+      this.addInteractable(1680, 472, 170, 120, '대장장이 [E]', () => this.tryTerrainEvolution(), 0xffb642);
+      this.addInteractable(1930, 472, 170, 120, '보급 상인 [E]', () => this.buyPotion(), 0x8be9fd);
     }
 
     buildArena() {
-      this.addPlatform(650, 535, 250, 28, 0x30384a);
-      this.addPlatform(1800, 520, 350, 28, 0x30384a);
-      this.addInteractable(120, 594, 130, 120, '마을 [E]', () => this.travelTo('town'), 0xffffff);
+      this.addPlatform(650, 425, 250, 28, 0x30384a);
+      this.addPlatform(1800, 415, 350, 28, 0x30384a);
+      this.addInteractable(120, 474, 130, 120, '마을 [E]', () => this.travelTo('town'), 0xffffff);
     }
 
     buildTerrainZone(zoneId) {
-      this.addInteractable(110, 594, 130, 120, '마을 [E]', () => this.travelTo('town'), 0xffffff);
-      this.addPlatform(650, 535, 280, 28, 0x2c3448);
-      this.addPlatform(1160, 470, 260, 28, 0x2c3448);
-      this.addPlatform(1700, 545, 310, 28, 0x2c3448);
-      this.addPlatform(2290, 480, 360, 28, 0x2c3448);
-      this.addHazard(925, 632, 300, 35);
-      this.addHazard(1505, 632, 260, 35);
-      this.addHazard(2600, 632, 420, 35);
-      this.add.text(2870, 585, '보스 관문: 몬스터 10마리 처치', { fontFamily: 'Consolas', fontSize: '16px', color: '#fff', stroke: '#000', strokeThickness: 4 });
+      this.addInteractable(110, 474, 130, 120, '마을 [E]', () => this.travelTo('town'), 0xffffff);
+      this.addPlatform(650, 425, 280, 28, 0x2c3448);
+      this.addPlatform(1160, 375, 260, 28, 0x2c3448);
+      this.addPlatform(1700, 435, 310, 28, 0x2c3448);
+      this.addPlatform(2290, 385, 360, 28, 0x2c3448);
+      this.addHazard(925, 512, 300, 35);
+      this.addHazard(1505, 512, 260, 35);
+      this.addHazard(2600, 512, 420, 35);
+      this.add.text(2870, 465, '보스 관문: 몬스터 10마리 처치', { fontFamily: 'Consolas', fontSize: '16px', color: '#fff', stroke: '#000', strokeThickness: 4 });
     }
 
     createPlayer() {
       const startX = save.zone === 'town' ? 150 : 135;
-      this.player = this.physics.add.sprite(startX, 520, this.getPlayerTextureKey());
+      this.player = this.physics.add.sprite(startX, 420, this.getPlayerTextureKey());
       this.player.setScale(1.08);
       this.player.setCollideWorldBounds(true);
       this.player.setDragX(1500);
@@ -948,17 +948,17 @@
 
     spawnZoneEnemies() {
       if (save.zone === 'town') {
-        this.spawnEnemy(2350, 510, { name: '훈련용 허수아비', hp: 999, atk: 0, exp: 0, gold: 0, tint: 0xeeeeee, dummy: true });
+        this.spawnEnemy(2350, 420, { name: '훈련용 허수아비', hp: 999, atk: 0, exp: 0, gold: 0, tint: 0xeeeeee, dummy: true });
         return;
       }
       if (save.zone === 'arena') {
-        this.spawnEnemy(1680, 500, { ...ZONES.arena.mob, dummy: true, patrol: 340 });
-        this.spawnEnemy(2060, 500, { ...ZONES.arena.mob, dummy: true, patrol: 260 });
+        this.spawnEnemy(1680, 420, { ...ZONES.arena.mob, dummy: true, patrol: 340 });
+        this.spawnEnemy(2060, 420, { ...ZONES.arena.mob, dummy: true, patrol: 260 });
         return;
       }
       const zone = ZONES[save.zone];
       const positions = [520, 840, 1180, 1470, 1880, 2190, 2520, 2860];
-      positions.forEach((x, index) => this.spawnEnemy(x, 510, { ...zone.mob, hp: zone.mob.hp + index * 5, patrol: 180 + index * 15 }));
+      positions.forEach((x, index) => this.spawnEnemy(x, 420, { ...zone.mob, hp: zone.mob.hp + index * 5, patrol: 180 + index * 15 }));
       if ((save.zoneKills[save.zone] || 0) >= 10) this.spawnBoss();
     }
 
@@ -1634,8 +1634,8 @@
       for (let i = 0; i < 3; i += 1) {
         const x = this.player.x + Phaser.Math.Between(-320, 520);
         const meteor = this.add.circle(x, 60, 28, 0xff5a21, 0.92).setDepth(12);
-        this.tweens.add({ targets: meteor, y: 620, duration: 620 + i * 120, ease: 'Quad.easeIn', onComplete: () => {
-          this.damageRadius(meteor.x, 620, 120, 3.0, { status: 'burn', popupColor: '#ff6a21' });
+        this.tweens.add({ targets: meteor, y: 500, duration: 620 + i * 120, ease: 'Quad.easeIn', onComplete: () => {
+          this.damageRadius(meteor.x, 500, 120, 3.0, { status: 'burn', popupColor: '#ff6a21' });
           this.cameras.main.shake(80, 0.008);
           meteor.destroy();
         }});
@@ -1735,7 +1735,7 @@
     paradoxBlink() {
       const pointer = this.input.activePointer;
       const x = clamp(pointer.worldX || this.player.x, 40, 3560);
-      const y = clamp(pointer.worldY || this.player.y, 80, 620);
+      const y = clamp(pointer.worldY || this.player.y, 80, 500);
       this.createTrail(this.player.x, this.player.y, x, y, 0xba55d3);
       this.player.setPosition(x, y);
       this.buffs.invincibleUntil = this.time.now + 250;
