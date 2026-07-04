@@ -208,6 +208,12 @@
     localStorage.setItem(accountSaveKey(currentAccountId), JSON.stringify(save));
   }
 
+  function restartActiveScene(data = {}) {
+    if (!activeScene) return;
+    if (typeof activeScene.safeRestart === 'function') activeScene.safeRestart(data);
+    else activeScene.scene.restart(data);
+  }
+
   function toast(message) {
     const node = $('toast');
     node.textContent = message;
@@ -510,7 +516,7 @@
       updateProfileUi();
       renderInventory();
       toast(`${BASE_CLASSES[classId].title} 생성 완료`);
-      if (activeScene) activeScene.scene.restart();
+      restartActiveScene();
       setTimeout(() => { selectingClass = false; }, 250);
     };
     const renderClassChoices = () => {
@@ -541,7 +547,7 @@
       updateProfileUi();
       renderInventory();
       AudioFX.playUiSound();
-      if (activeScene) activeScene.scene.restart();
+      restartActiveScene();
     };
     const registerLocalAccount = () => {
       const accountId = normalizeAccountId(accountIdInput?.value);
@@ -564,7 +570,7 @@
       AudioFX.playUiSound();
       toast('계정 생성 완료. 직업을 선택하세요.');
       showClassSelect();
-      if (activeScene) activeScene.scene.restart();
+      restartActiveScene();
     };
     const loginLocalAccount = () => {
       const accountId = normalizeAccountId(accountIdInput?.value);
@@ -590,7 +596,7 @@
       renderInventory();
       updateProfileUi();
       toast('로그아웃 완료. 다른 계정으로 로그인하세요.');
-      if (activeScene) activeScene.scene.restart();
+      restartActiveScene();
     };
     $('showLoginButton')?.addEventListener('click', () => setAuthMode('login'));
     $('showRegisterButton')?.addEventListener('click', () => setAuthMode('register'));
@@ -636,7 +642,7 @@
       toast('캐릭터 정보 초기화 완료');
       if (save.playerName) showClassSelect();
       else showStartScreen();
-      if (activeScene) activeScene.scene.restart();
+      restartActiveScene();
     });
     document.addEventListener('pointerdown', () => AudioFX.unlock(), { once: true });
     document.addEventListener('keydown', () => AudioFX.unlock(), { once: true });
@@ -665,12 +671,32 @@
       this.nextAttackAt = 0;
       this.nextHazardTickAt = 0;
       this.chronoFrozenUntil = 0;
+      this.isTransitioning = false;
+      this.pendingSpawnPoint = null;
+    }
+
+    init(data = {}) {
+      this.cooldowns = {};
+      this.buffs = {};
+      this.touchLast = {};
+      this.comboCount = 0;
+      this.comboStep = 0;
+      this.lastComboHitAt = 0;
+      this.lastGroundedAt = 0;
+      this.jumpBufferedAt = -9999;
+      this.nextAttackAt = 0;
+      this.nextHazardTickAt = 0;
+      this.chronoFrozenUntil = 0;
+      this.isTransitioning = false;
+      this.pendingSpawnPoint = data.spawnPoint || null;
     }
 
     preload() {}
 
     create() {
       activeScene = this;
+      this.input.enabled = true;
+      if (this.physics?.world) this.physics.world.resume();
       this.createTextures();
       this.stats = getBaseStats();
       this.playerHp = save.hp > 0 ? Math.min(save.hp, this.stats.hp) : this.stats.hp;
@@ -689,7 +715,11 @@
       this.enemyGroup = this.physics.add.group({ allowGravity: true });
       this.physics.add.collider(this.player, this.platforms);
       this.physics.add.collider(this.enemyGroup, this.platforms);
-      this.physics.add.collider(this.projectiles, this.platforms, (projectile) => projectile.destroy());
+      this.physics.add.collider(this.projectiles, this.platforms, (projectile) => {
+        if (this.time.now < (projectile.ignoreTerrainUntil || 0)) return;
+        this.createProjectileImpact(projectile.x, projectile.y, projectile.trailColor || 0xffffff, 10);
+        projectile.destroy();
+      });
       this.physics.add.overlap(this.player, this.enemyGroup, (player, enemy) => this.onPlayerEnemyOverlap(enemy));
       this.spawnZoneEnemies();
       this.keys = this.input.keyboard.addKeys({
@@ -848,11 +878,40 @@
       drawHero('hero-assassin', { skin: 0xd2b08f, hair: 0x0f1614, body: 0x25332c, bodyDark: 0x111a16, trim: 0x8aff80, arm: 0x1d2923, leg: 0x111813, boot: 0x080c0a, cape: 0x18241e, capeDark: 0x070b09 }, 'daggers');
       drawHero('hero-reaper', { skin: 0xcdb8e8, hair: 0x0a070d, body: 0x17101d, bodyDark: 0x07040a, trim: 0xba55d3, arm: 0x1e1228, leg: 0x0c0712, boot: 0x050306, cape: 0x22102f, capeDark: 0x08030d }, 'scythe');
       drawHero('hero-chrono', { skin: 0xd7e8ff, hair: 0x0d2032, body: 0x14304c, bodyDark: 0x071827, trim: 0x67d9ff, arm: 0x1f5274, leg: 0x0d2335, boot: 0x06121e, cape: 0x102840, capeDark: 0x050d18 }, 'chrono');
+      const drawArrowProjectile = () => {
+        if (this.textures.exists('arrow')) return;
+        g.clear();
+        g.fillStyle(0x0a121d, 0.55).fillRoundedRect(2, 5, 30, 4, 2);
+        g.fillStyle(0xd4f1ff, 1).fillRoundedRect(3, 4, 32, 5, 3);
+        g.fillStyle(0xffffff, 0.95).fillTriangle(32, 0, 47, 7, 32, 14);
+        g.fillStyle(0x67d9ff, 0.85).fillTriangle(8, 2, 1, 7, 8, 12);
+        g.lineStyle(2, 0x10141d, 0.85).strokeTriangle(32, 0, 47, 7, 32, 14);
+        g.generateTexture('arrow', 48, 14);
+      };
+      const drawOrbProjectile = () => {
+        if (this.textures.exists('orb')) return;
+        g.clear();
+        g.fillStyle(0xb388ff, 0.30).fillCircle(16, 16, 15);
+        g.fillStyle(0x6d45c9, 0.80).fillCircle(16, 16, 10);
+        g.fillStyle(0xffffff, 0.96).fillCircle(12, 11, 4);
+        g.lineStyle(2, 0xe9d6ff, 0.90).strokeCircle(16, 16, 14);
+        g.lineStyle(1, 0xffffff, 0.42).strokeCircle(16, 16, 7);
+        g.generateTexture('orb', 32, 32);
+      };
+      const drawSlashProjectile = () => {
+        if (this.textures.exists('slash')) return;
+        g.clear();
+        g.fillStyle(0xffffff, 0.18).fillEllipse(30, 13, 58, 18);
+        g.lineStyle(8, 0xffffff, 0.96).lineBetween(4, 17, 58, 6);
+        g.lineStyle(3, 0xffd166, 0.96).lineBetween(7, 18, 61, 7);
+        g.lineStyle(2, 0xff6a21, 0.75).lineBetween(14, 23, 48, 17);
+        g.generateTexture('slash', 64, 28);
+      };
       drawMonster();
       drawBoss();
-      makeRect('arrow', 34, 8, 0xd4f1ff, 0x161616);
-      makeRect('orb', 18, 18, 0xb388ff, 0xffffff);
-      makeRect('slash', 46, 18, 0xffffff, 0xffd166);
+      drawArrowProjectile();
+      drawOrbProjectile();
+      drawSlashProjectile();
       g.destroy();
     }
 
@@ -964,7 +1023,7 @@
     }
 
     buildTerrainZone(zoneId) {
-      this.addInteractable(110, 474, 130, 120, '마을 [E]', () => this.travelTo('town'), 0xffffff);
+      this.addInteractable(72, 474, 96, 110, '마을 귀환 [E]', () => this.travelTo('town'), 0xffffff);
       this.addPlatform(650, 425, 280, 28, 0x2c3448);
       this.addPlatform(1160, 375, 260, 28, 0x2c3448);
       this.addPlatform(1700, 435, 310, 28, 0x2c3448);
@@ -975,9 +1034,15 @@
       this.add.text(2870, 465, '보스 관문: 몬스터 10마리 처치', { fontFamily: 'Consolas', fontSize: '16px', color: '#fff', stroke: '#000', strokeThickness: 4 });
     }
 
+    defaultSpawnPoint(zoneId) {
+      if (zoneId === 'town') return { x: 160, y: 420 };
+      if (zoneId === 'arena') return { x: 260, y: 420 };
+      return { x: 270, y: 420 };
+    }
+
     createPlayer() {
-      const startX = save.zone === 'town' ? 150 : 135;
-      this.player = this.physics.add.sprite(startX, 420, this.getPlayerTextureKey());
+      const spawn = this.pendingSpawnPoint || this.defaultSpawnPoint(save.zone);
+      this.player = this.physics.add.sprite(spawn.x, spawn.y, this.getPlayerTextureKey());
       this.player.setScale(1.08);
       this.player.setCollideWorldBounds(true);
       this.player.setDragX(1500);
@@ -1023,11 +1088,34 @@
       this.shadowTwin.setDepth(this.player.depth - 1);
     }
 
+    safeRestart(data = {}) {
+      this.isTransitioning = false;
+      this.input.enabled = true;
+      if (this.physics?.world) this.physics.world.resume();
+      this.scene.start('GameScene', data);
+    }
+
     travelTo(zoneId) {
+      if (!ZONES[zoneId] || this.isTransitioning || zoneId === save.zone) return;
+      this.isTransitioning = true;
+      const spawnPoint = this.defaultSpawnPoint(zoneId);
+      this.syncSaveFromPlayer();
       save.zone = zoneId;
       saveGame();
-      this.cameras.main.fadeOut(220, 0, 0, 0);
-      this.time.delayedCall(230, () => this.scene.restart());
+      $('prompt')?.classList.remove('visible');
+      this.player?.setVelocity(0, 0);
+      this.input.enabled = false;
+      if (this.physics?.world) this.physics.world.resume();
+      AudioFX.playUiSound();
+      this.cameras.main.fadeOut(180, 0, 0, 0);
+      let didRestart = false;
+      const restart = () => {
+        if (didRestart) return;
+        didRestart = true;
+        this.safeRestart({ spawnPoint });
+      };
+      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, restart);
+      this.time.delayedCall(260, restart);
     }
 
     spawnZoneEnemies() {
@@ -1095,6 +1183,7 @@
       this.updateEnemies(time, delta);
       this.updateStatuses(time, delta);
       this.updateEffects(time);
+      this.updateProjectiles(time);
       this.updateInteractPrompt();
       if (save.zone !== 'town' && save.zone !== 'arena' && !this.bossSprite && (save.zoneKills[save.zone] || 0) >= 10) this.spawnBoss();
       if (time - this.lastComboHitAt > 2000 && this.comboCount) this.setCombo(0);
@@ -1245,6 +1334,24 @@
       this.player.setAlpha(alpha);
     }
 
+    updateProjectiles(time) {
+      if (!this.projectiles) return;
+      this.projectiles.children.each((projectile) => {
+        if (!projectile?.active || !projectile.body) return;
+        const vx = projectile.body.velocity.x;
+        const vy = projectile.body.velocity.y;
+        if (Math.abs(vx) + Math.abs(vy) > 8) projectile.setRotation(Math.atan2(vy, vx));
+        if (time < (projectile.nextTrailAt || 0)) return;
+        projectile.nextTrailAt = time + 38;
+        const dir = Math.sign(vx || this.facing || 1);
+        const color = projectile.trailColor || 0xffffff;
+        const radius = projectile.texture.key === 'orb' ? 5 : 3;
+        const trail = this.add.circle(projectile.x - dir * 18, projectile.y, radius, color, 0.38).setDepth(8);
+        trail.setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({ targets: trail, alpha: 0, scale: 0.25, duration: 180, ease: 'Quad.easeOut', onComplete: () => trail.destroy() });
+      });
+    }
+
     updateInteractPrompt() {
       const nearest = this.getNearestInteractable();
       const prompt = $('prompt');
@@ -1264,6 +1371,7 @@
     }
 
     activateNearestInteractable() {
+      if (this.isTransitioning) return;
       const nearest = this.getNearestInteractable();
       if (nearest) nearest.action();
     }
@@ -1336,7 +1444,7 @@
       save.zone = 'town';
       this.syncSaveFromPlayer();
       saveGame();
-      this.time.delayedCall(450, () => this.scene.restart());
+      this.time.delayedCall(450, () => this.safeRestart({ spawnPoint: this.defaultSpawnPoint('town') }));
     }
 
     syncSaveFromPlayer() {
@@ -1415,16 +1523,33 @@
     }
 
     spawnProjectile(options) {
-      const projectile = this.physics.add.sprite(this.player.x + this.facing * 32, this.player.y + (options.offsetY || -6), options.texture || 'arrow');
-      projectile.setTint(options.tint || this.hitboxColor(options));
+      const direction = this.facing || 1;
+      const angle = Phaser.Math.DegToRad(options.angle || 0);
+      const speed = options.speed || 520;
+      const spawnDistance = options.spawnDistance || 62;
+      const texture = options.texture || 'arrow';
+      const color = options.tint || this.hitboxColor(options);
+      const projectile = this.projectiles.create(this.player.x + direction * spawnDistance, this.player.y + (options.offsetY ?? -18), texture);
+      projectile.setDepth(9);
+      projectile.setTint(color);
       projectile.setScale(options.scaleX || 1, options.scaleY || 1);
-      projectile.setFlipX(this.facing < 0);
       projectile.body.setAllowGravity(false);
-      projectile.setVelocity(Math.cos((options.angle || 0) * Math.PI / 180) * options.speed * this.facing, Math.sin((options.angle || 0) * Math.PI / 180) * options.speed);
+      projectile.body.setImmovable(false);
+      projectile.body.setSize(options.bodyW || (texture === 'orb' ? 16 : 30), options.bodyH || (texture === 'orb' ? 16 : 8), true);
+      const vx = Math.cos(angle) * speed * direction;
+      const vy = Math.sin(angle) * speed;
+      projectile.setVelocity(vx, vy);
+      projectile.setRotation(Math.atan2(vy, vx));
+      projectile.ignoreTerrainUntil = this.time.now + 95;
+      projectile.trailColor = color;
+      projectile.nextTrailAt = 0;
       projectile.dataPayload = { ...options, remainingPierce: options.pierce || 0, hitTargets: new Set() };
-      this.projectiles.add(projectile);
       this.physics.add.overlap(projectile, this.enemyGroup, (shot, enemy) => this.onProjectileHit(shot, enemy));
-      this.time.delayedCall(options.life || 1800, () => projectile.destroy());
+      this.time.delayedCall(options.life || 1800, () => {
+        if (!projectile.active) return;
+        this.createProjectileImpact(projectile.x, projectile.y, color, 7);
+        projectile.destroy();
+      });
       if (save.path === 'terrain') this.spawnElementParticles(projectile.x, projectile.y, 24, 24);
       return projectile;
     }
@@ -1433,11 +1558,31 @@
       if (!projectile.active || projectile.dataPayload.hitTargets.has(enemy)) return;
       const payload = projectile.dataPayload;
       payload.hitTargets.add(enemy);
+      this.createProjectileImpact(projectile.x, projectile.y, projectile.trailColor || this.hitboxColor(payload), payload.splash ? 16 : 10);
       this.applyDamage(enemy, this.calculateDamage(payload.mult || 1), payload);
       if (payload.splash) this.splashDamage(enemy.x, enemy.y, payload.splash, payload.mult || 1, payload);
       if (payload.chain) this.chainDamage(enemy, payload.chain, payload.mult || 1, payload);
       if (payload.remainingPierce > 0) payload.remainingPierce -= 1;
       else projectile.destroy();
+    }
+
+    createProjectileImpact(x, y, color = 0xffffff, size = 10) {
+      const burst = this.add.circle(x, y, size, color, 0.28).setDepth(10);
+      burst.setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({ targets: burst, alpha: 0, scale: 1.9, duration: 170, ease: 'Quad.easeOut', onComplete: () => burst.destroy() });
+      for (let i = 0; i < 4; i += 1) {
+        const spark = this.add.circle(x, y, 2, 0xffffff, 0.72).setDepth(11);
+        spark.setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({
+          targets: spark,
+          x: x + Phaser.Math.Between(-18, 18),
+          y: y + Phaser.Math.Between(-14, 14),
+          alpha: 0,
+          duration: 150,
+          ease: 'Quad.easeOut',
+          onComplete: () => spark.destroy()
+        });
+      }
     }
 
     splashDamage(x, y, radius, mult, options) {
