@@ -695,6 +695,7 @@
 
     create() {
       activeScene = this;
+      if (location.hostname === '127.0.0.1' || location.hostname === 'localhost') window.__mythicScene = this;
       this.input.enabled = true;
       if (this.physics?.world) this.physics.world.resume();
       this.createTextures();
@@ -704,7 +705,7 @@
       this.interactables = [];
       this.hazards = [];
       this.enemySprites = [];
-      this.projectiles = this.physics.add.group();
+      this.projectiles = this.physics.add.group({ allowGravity: false, immovable: true });
       this.platforms = this.physics.add.staticGroup();
       this.physics.world.setBounds(0, 0, 3600, 720);
       this.cameras.main.setBounds(0, 0, 3600, 720);
@@ -715,11 +716,6 @@
       this.enemyGroup = this.physics.add.group({ allowGravity: true });
       this.physics.add.collider(this.player, this.platforms);
       this.physics.add.collider(this.enemyGroup, this.platforms);
-      this.physics.add.collider(this.projectiles, this.platforms, (projectile) => {
-        if (this.time.now < (projectile.ignoreTerrainUntil || 0)) return;
-        this.createProjectileImpact(projectile.x, projectile.y, projectile.trailColor || 0xffffff, 10);
-        projectile.destroy();
-      });
       this.physics.add.overlap(this.player, this.enemyGroup, (player, enemy) => this.onPlayerEnemyOverlap(enemy));
       this.spawnZoneEnemies();
       this.keys = this.input.keyboard.addKeys({
@@ -1338,6 +1334,11 @@
       if (!this.projectiles) return;
       this.projectiles.children.each((projectile) => {
         if (!projectile?.active || !projectile.body) return;
+        if (projectile.x < -120 || projectile.x > 3720 || projectile.y < -120 || projectile.y > 760) {
+          projectile.destroy();
+          return;
+        }
+        if (Number.isFinite(projectile.flightVx)) this.lockProjectileMotion(projectile, projectile.flightVx, projectile.flightVy || 0);
         const vx = projectile.body.velocity.x;
         const vy = projectile.body.velocity.y;
         if (Math.abs(vx) + Math.abs(vy) > 8) projectile.setRotation(Math.atan2(vy, vx));
@@ -1522,25 +1523,40 @@
       return 0xffffff;
     }
 
+    lockProjectileMotion(projectile, vx, vy) {
+      if (!projectile?.body) return;
+      projectile.flightVx = vx;
+      projectile.flightVy = vy;
+      projectile.body.allowGravity = false;
+      projectile.body.gravity.y = 0;
+      projectile.body.moves = true;
+      projectile.body.immovable = false;
+      projectile.body.setAllowGravity?.(false);
+      projectile.body.setVelocity?.(vx, vy);
+      projectile.setGravityY?.(0);
+      projectile.setAcceleration?.(0, 0);
+      projectile.setDrag?.(0, 0);
+      projectile.setVelocity(vx, vy);
+    }
+
     spawnProjectile(options) {
       const direction = this.facing || 1;
       const angle = Phaser.Math.DegToRad(options.angle || 0);
       const speed = options.speed || 520;
-      const spawnDistance = options.spawnDistance || 62;
+      const spawnDistance = options.spawnDistance || 74;
       const texture = options.texture || 'arrow';
       const color = options.tint || this.hitboxColor(options);
-      const projectile = this.projectiles.create(this.player.x + direction * spawnDistance, this.player.y + (options.offsetY ?? -18), texture);
+      const projectile = this.physics.add.sprite(this.player.x + direction * spawnDistance, this.player.y + (options.offsetY ?? -22), texture);
+      this.projectiles.add(projectile);
       projectile.setDepth(9);
       projectile.setTint(color);
       projectile.setScale(options.scaleX || 1, options.scaleY || 1);
-      projectile.body.setAllowGravity(false);
-      projectile.body.setImmovable(false);
+      projectile.setCollideWorldBounds(false);
       projectile.body.setSize(options.bodyW || (texture === 'orb' ? 16 : 30), options.bodyH || (texture === 'orb' ? 16 : 8), true);
       const vx = Math.cos(angle) * speed * direction;
       const vy = Math.sin(angle) * speed;
-      projectile.setVelocity(vx, vy);
+      this.lockProjectileMotion(projectile, vx, vy);
       projectile.setRotation(Math.atan2(vy, vx));
-      projectile.ignoreTerrainUntil = this.time.now + 95;
       projectile.trailColor = color;
       projectile.nextTrailAt = 0;
       projectile.dataPayload = { ...options, remainingPierce: options.pierce || 0, hitTargets: new Set() };
