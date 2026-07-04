@@ -40,27 +40,27 @@
     },
     lava: {
       title: 'Lava Zone', color: 0x2d1114, accent: 0xff3300, material: 'Lava Core',
-      hazard: { name: 'Molten Lava', damage: 15, color: 0xff3600 },
-      mob: { name: 'Ember Brute', hp: 70, atk: 12, exp: 22, gold: 14, tint: 0xff6a21 },
-      boss: { name: 'Lava Golem Boss', hp: 640, atk: 28, exp: 160, gold: 120, tint: 0xff3300 }
+      hazard: { name: 'Molten Lava', damage: 20, color: 0xff3600 },
+      mob: { name: 'Ember Brute', hp: 96, atk: 19, exp: 26, gold: 16, tint: 0xff6a21 },
+      boss: { name: 'Lava Golem Boss', hp: 860, atk: 42, exp: 180, gold: 135, tint: 0xff3300 }
     },
     frost: {
       title: 'Frost Zone', color: 0x102536, accent: 0x67d9ff, material: 'Frost Heart',
-      hazard: { name: 'Frostbite Field', damage: 10, color: 0x67d9ff },
-      mob: { name: 'Rime Hound', hp: 76, atk: 13, exp: 24, gold: 16, tint: 0x9ae7ff },
-      boss: { name: 'Frost Titan Boss', hp: 700, atk: 30, exp: 175, gold: 130, tint: 0x67d9ff }
+      hazard: { name: 'Frostbite Field', damage: 15, color: 0x67d9ff },
+      mob: { name: 'Rime Hound', hp: 104, atk: 20, exp: 28, gold: 18, tint: 0x9ae7ff },
+      boss: { name: 'Frost Titan Boss', hp: 920, atk: 45, exp: 195, gold: 148, tint: 0x67d9ff }
     },
     ruin: {
       title: 'Ruin Zone', color: 0x221e15, accent: 0xffd166, material: 'Ancient Dynamo',
-      hazard: { name: 'Arc Trap', damage: 12, color: 0xffd166 },
-      mob: { name: 'Relic Sentry', hp: 82, atk: 15, exp: 28, gold: 18, tint: 0xffd166 },
-      boss: { name: 'Ruin Colossus Boss', hp: 760, atk: 33, exp: 190, gold: 150, tint: 0xffd166 }
+      hazard: { name: 'Arc Trap', damage: 17, color: 0xffd166 },
+      mob: { name: 'Relic Sentry', hp: 112, atk: 23, exp: 32, gold: 21, tint: 0xffd166 },
+      boss: { name: 'Ruin Colossus Boss', hp: 1010, atk: 50, exp: 215, gold: 165, tint: 0xffd166 }
     },
     abyss: {
       title: 'Abyss Zone', color: 0x0b1020, accent: 0xba55d3, material: 'Abyss Shard',
-      hazard: { name: 'Void Leak', damage: 18, color: 0x8b2bd6 },
-      mob: { name: 'Abyss Wraith', hp: 88, atk: 17, exp: 32, gold: 22, tint: 0xba55d3 },
-      boss: { name: 'Abyss Sovereign Boss', hp: 840, atk: 38, exp: 230, gold: 180, tint: 0xba55d3 }
+      hazard: { name: 'Void Leak', damage: 24, color: 0x8b2bd6 },
+      mob: { name: 'Abyss Wraith', hp: 124, atk: 27, exp: 38, gold: 25, tint: 0xba55d3 },
+      boss: { name: 'Abyss Sovereign Boss', hp: 1120, atk: 58, exp: 260, gold: 205, tint: 0xba55d3 }
     },
     arena: {
       title: 'Training Arena', color: 0x151722, accent: 0xeeeeee, material: null,
@@ -702,86 +702,111 @@
       };
       const drawHero = (key, palette, weapon) => {
         if (this.textures.exists(key)) return;
+        const shape = {
+          sword: { bodyX: 23, bodyY: 35, bodyW: 38, bodyH: 48, shoulderX: 13, shoulderY: 35, shoulderW: 58, shoulderH: 16, armW: 14, legW: 12, stance: 11, head: 'helm', shadow: 62 },
+          bow: { bodyX: 28, bodyY: 35, bodyW: 28, bodyH: 45, shoulderX: 20, shoulderY: 36, shoulderW: 44, shoulderH: 12, armW: 10, legW: 9, stance: 7, head: 'hood', shadow: 46 },
+          staff: { bodyX: 25, bodyY: 34, bodyW: 34, bodyH: 55, shoulderX: 18, shoulderY: 37, shoulderW: 48, shoulderH: 13, armW: 10, legW: 10, stance: 9, head: 'mage', shadow: 50 },
+          daggers: { bodyX: 27, bodyY: 39, bodyW: 30, bodyH: 39, shoulderX: 18, shoulderY: 39, shoulderW: 48, shoulderH: 11, armW: 9, legW: 9, stance: 15, head: 'mask', shadow: 54 },
+          scythe: { bodyX: 24, bodyY: 31, bodyW: 36, bodyH: 58, shoulderX: 14, shoulderY: 34, shoulderW: 56, shoulderH: 15, armW: 11, legW: 10, stance: 13, head: 'skull', shadow: 58 },
+          chrono: { bodyX: 25, bodyY: 33, bodyW: 34, bodyH: 50, shoulderX: 16, shoulderY: 35, shoulderW: 52, shoulderH: 14, armW: 11, legW: 10, stance: 10, head: 'visor', shadow: 56 }
+        }[weapon] || { bodyX: 26, bodyY: 35, bodyW: 32, bodyH: 46, shoulderX: 18, shoulderY: 36, shoulderW: 48, shoulderH: 12, armW: 10, legW: 10, stance: 10, head: 'face', shadow: 48 };
+        const cx = 42;
         g.clear();
-        g.fillStyle(0x000000, 0.26).fillEllipse(36, 86, 42, 8);
-        if (palette.cape) {
-          g.fillStyle(palette.cape, 0.82).fillTriangle(23, 29, 49, 29, 56, 78);
-          g.fillStyle(palette.capeDark, 0.75).fillTriangle(24, 31, 35, 78, 17, 79);
-        }
+        g.fillStyle(0x000000, 0.30).fillEllipse(cx, 101, shape.shadow, 10);
         if (weapon === 'chrono') {
-          g.lineStyle(4, 0x67d9ff, 0.92).strokeCircle(36, 43, 32);
-          g.lineStyle(2, 0xffffff, 0.5).strokeCircle(36, 43, 22);
+          g.lineStyle(4, 0x67d9ff, 0.80).strokeCircle(cx, 52, 39);
+          g.lineStyle(2, 0xffffff, 0.45).strokeCircle(cx, 52, 28);
         }
-        g.fillStyle(palette.boot, 1).fillRoundedRect(22, 67, 10, 17, 3).fillRoundedRect(40, 67, 10, 17, 3);
-        g.fillStyle(palette.leg, 1).fillRoundedRect(24, 51, 9, 23, 4).fillRoundedRect(39, 51, 9, 23, 4);
-        g.fillStyle(palette.arm, 1).fillRoundedRect(13, 34, 12, 29, 5).fillRoundedRect(47, 34, 12, 29, 5);
-        g.fillStyle(palette.trim, 1).fillRoundedRect(17, 30, 38, 13, 6);
-        g.fillStyle(palette.body, 1).fillRoundedRect(22, 29, 28, 39, 7);
-        g.fillStyle(palette.bodyDark, 0.8).fillTriangle(24, 35, 49, 35, 38, 67);
-        g.fillStyle(palette.trim, 1).fillRect(25, 45, 22, 4);
-        g.fillStyle(palette.skin, 1).fillCircle(36, 19, 12);
-        g.fillStyle(palette.hair, 1).fillRoundedRect(24, 9, 24, 12, 6);
-        g.fillStyle(palette.hair, 1).fillTriangle(25, 18, 18, 32, 30, 23).fillTriangle(48, 18, 54, 32, 42, 23);
-        g.fillStyle(0xffffff, 0.95).fillRect(31, 18, 3, 2).fillRect(40, 18, 3, 2);
-        g.fillStyle(palette.trim, 1).fillCircle(21, 35, 5).fillCircle(51, 35, 5);
-        if (weapon === 'sword') {
-          g.fillStyle(0x2a0d0d, 1).fillTriangle(24, 10, 12, 1, 27, 5).fillTriangle(48, 10, 60, 1, 45, 5);
-          g.fillStyle(0x151015, 1).fillTriangle(18, 34, 6, 27, 14, 47).fillTriangle(54, 34, 66, 27, 58, 47);
-          g.lineStyle(3, 0xffd166, 0.95).strokeCircle(36, 46, 8);
-          g.fillStyle(0xff3b30, 0.9).fillCircle(36, 46, 4);
+        if (weapon === 'staff') {
+          g.fillStyle(palette.capeDark, 0.75).fillTriangle(25, 37, 59, 37, 68, 99);
+          g.fillStyle(palette.cape, 0.66).fillTriangle(26, 38, 43, 95, 14, 96);
         } else if (weapon === 'bow') {
-          g.fillStyle(0x0d2534, 0.95).fillTriangle(36, 2, 17, 26, 55, 26);
-          g.fillStyle(0xd4f1ff, 0.95).fillRect(27, 20, 18, 3);
-          g.fillStyle(0x0a1118, 1).fillRoundedRect(10, 25, 8, 37, 4);
-          g.lineStyle(2, 0xd4f1ff, 0.85).lineBetween(12, 23, 7, 9).lineBetween(15, 25, 12, 8).lineBetween(17, 29, 17, 10);
-        } else if (weapon === 'staff') {
-          g.fillStyle(0x2a1847, 1).fillTriangle(36, -2, 20, 24, 52, 24);
-          g.lineStyle(3, 0xe9d6ff, 0.9).lineBetween(36, -2, 20, 24).lineBetween(20, 24, 52, 24).lineBetween(52, 24, 36, -2);
-          g.fillStyle(0xb388ff, 0.65).fillCircle(15, 35, 5).fillCircle(57, 50, 4).fillCircle(18, 59, 3);
-          g.lineStyle(2, 0xffffff, 0.55).strokeCircle(36, 44, 18);
+          g.fillStyle(palette.capeDark, 0.86).fillTriangle(22, 30, 56, 31, 50, 96);
+          g.fillStyle(palette.cape, 0.66).fillTriangle(24, 33, 31, 94, 12, 91);
         } else if (weapon === 'daggers') {
-          g.fillStyle(0x07100c, 1).fillRoundedRect(24, 16, 24, 11, 5);
-          g.fillStyle(0x8aff80, 1).fillRect(30, 20, 5, 2).fillRect(39, 20, 5, 2);
-          g.fillStyle(0x11251b, 0.95).fillTriangle(49, 26, 68, 31, 50, 39);
-          g.lineStyle(2, 0x8aff80, 0.7).lineBetween(18, 62, 4, 77).lineBetween(54, 62, 68, 77);
-        } else if (weapon === 'scythe') {
-          g.fillStyle(0x050306, 0.98).fillTriangle(36, 2, 17, 31, 55, 31);
-          g.fillStyle(0xd7c8ff, 0.9).fillRoundedRect(29, 15, 14, 11, 5);
-          g.fillStyle(0xba55d3, 0.58).fillCircle(16, 29, 4).fillCircle(58, 57, 5).fillCircle(12, 68, 3);
-          g.lineStyle(2, 0xba55d3, 0.75).strokeCircle(36, 45, 25);
-        } else if (weapon === 'chrono') {
-          g.lineStyle(3, 0x67d9ff, 0.9).strokeCircle(36, 18, 17);
-          g.lineStyle(2, 0xffffff, 0.75).lineBetween(36, 18, 36, 8).lineBetween(36, 18, 46, 22);
-          g.fillStyle(0x67d9ff, 0.78).fillCircle(17, 31, 4).fillCircle(56, 56, 4).fillCircle(19, 66, 3).fillCircle(52, 28, 3);
-          g.lineStyle(2, 0x67d9ff, 0.55).strokeRoundedRect(18, 28, 36, 41, 8);
+          g.fillStyle(palette.capeDark, 0.82).fillTriangle(23, 35, 62, 41, 73, 65);
+        } else if (palette.cape) {
+          g.fillStyle(palette.capeDark, 0.86).fillTriangle(20, 31, 60, 31, 66, 96);
+          g.fillStyle(palette.cape, 0.65).fillTriangle(22, 34, 42, 96, 13, 96);
+        }
+        g.fillStyle(palette.boot, 1).fillRoundedRect(cx - shape.stance - shape.legW, 80, shape.legW, 19, 4).fillRoundedRect(cx + shape.stance, 80, shape.legW, 19, 4);
+        g.fillStyle(palette.leg, 1).fillRoundedRect(cx - shape.stance - shape.legW + 1, 61, shape.legW - 1, 24, 5).fillRoundedRect(cx + shape.stance + 1, 61, shape.legW - 1, 24, 5);
+        if (weapon === 'staff' || weapon === 'scythe') {
+          g.fillStyle(palette.bodyDark, 0.96).fillTriangle(shape.bodyX, 53, shape.bodyX + shape.bodyW, 53, cx + 22, 97);
+          g.fillStyle(palette.body, 0.98).fillTriangle(shape.bodyX + 2, 49, shape.bodyX + shape.bodyW - 2, 49, cx - 20, 97);
+        }
+        g.fillStyle(palette.arm, 1).fillRoundedRect(shape.shoulderX - 7, shape.shoulderY + 8, shape.armW, 35, 7).fillRoundedRect(shape.shoulderX + shape.shoulderW - shape.armW + 7, shape.shoulderY + 8, shape.armW, 35, 7);
+        g.fillStyle(palette.trim, 1).fillRoundedRect(shape.shoulderX, shape.shoulderY, shape.shoulderW, shape.shoulderH, 7);
+        if (weapon === 'sword') {
+          g.fillStyle(0x151015, 1).fillTriangle(15, 37, 3, 29, 11, 53).fillTriangle(69, 37, 81, 29, 73, 53);
+        }
+        g.fillStyle(palette.body, 1).fillRoundedRect(shape.bodyX, shape.bodyY, shape.bodyW, shape.bodyH, weapon === 'daggers' ? 11 : 8);
+        g.fillStyle(palette.bodyDark, 0.78).fillTriangle(shape.bodyX + 3, shape.bodyY + 7, shape.bodyX + shape.bodyW - 1, shape.bodyY + 6, shape.bodyX + shape.bodyW * 0.55, shape.bodyY + shape.bodyH - 3);
+        g.fillStyle(palette.trim, 1).fillRect(shape.bodyX + 6, shape.bodyY + 18, Math.max(12, shape.bodyW - 12), 4);
+        if (weapon === 'sword') g.lineStyle(3, 0xffd166, 0.95).strokeCircle(cx, 58, 9);
+        if (weapon === 'staff') g.lineStyle(2, 0xe9d6ff, 0.55).strokeCircle(cx, 57, 20);
+        if (weapon === 'chrono') g.lineStyle(2, 0x67d9ff, 0.72).strokeRoundedRect(shape.bodyX + 3, shape.bodyY + 3, shape.bodyW - 6, shape.bodyH - 7, 8);
+        if (shape.head === 'helm') {
+          g.fillStyle(palette.skin, 1).fillCircle(cx, 22, 12);
+          g.fillStyle(0x2a0d0d, 1).fillRoundedRect(27, 10, 30, 14, 6);
+          g.fillStyle(0xffd166, 1).fillTriangle(30, 12, 14, 0, 34, 7).fillTriangle(54, 12, 70, 0, 50, 7);
+          g.fillStyle(0xff4a4a, 1).fillRect(34, 22, 4, 2).fillRect(46, 22, 4, 2);
+        } else if (shape.head === 'hood') {
+          g.fillStyle(palette.capeDark, 1).fillTriangle(cx, 3, 22, 29, 62, 29);
+          g.fillStyle(palette.skin, 1).fillRoundedRect(31, 17, 22, 16, 8);
+          g.fillStyle(0xd4f1ff, 1).fillRect(32, 23, 20, 3);
+        } else if (shape.head === 'mage') {
+          g.fillStyle(palette.skin, 1).fillCircle(cx, 24, 11);
+          g.fillStyle(0x2a1847, 1).fillTriangle(cx, -4, 22, 25, 62, 25);
+          g.lineStyle(3, palette.trim, 0.9).lineBetween(cx, -4, 22, 25).lineBetween(22, 25, 62, 25).lineBetween(62, 25, cx, -4);
+          g.fillStyle(0xffffff, 0.85).fillRect(35, 24, 3, 2).fillRect(47, 24, 3, 2);
+        } else if (shape.head === 'mask') {
+          g.fillStyle(0x0a1210, 1).fillRoundedRect(28, 12, 28, 24, 10);
+          g.fillStyle(0x8aff80, 1).fillRect(34, 23, 5, 2).fillRect(45, 23, 5, 2);
+          g.fillStyle(palette.cape, 0.95).fillTriangle(53, 27, 80, 34, 53, 43);
+        } else if (shape.head === 'skull') {
+          g.fillStyle(0x050306, 1).fillTriangle(cx, 2, 18, 34, 66, 34);
+          g.fillStyle(0xd7c8ff, 0.93).fillRoundedRect(31, 15, 22, 18, 8);
+          g.fillStyle(0x180820, 1).fillRect(35, 22, 5, 4).fillRect(45, 22, 5, 4);
+          g.fillStyle(0xba55d3, 0.65).fillCircle(17, 35, 4).fillCircle(67, 68, 5).fillCircle(12, 80, 3);
+        } else if (shape.head === 'visor') {
+          g.fillStyle(palette.skin, 1).fillCircle(cx, 23, 11);
+          g.lineStyle(3, 0x67d9ff, 0.9).strokeCircle(cx, 20, 18);
+          g.fillStyle(0x071827, 1).fillRoundedRect(30, 18, 24, 9, 5);
+          g.fillStyle(0x67d9ff, 0.95).fillRect(33, 21, 18, 2);
+        } else {
+          g.fillStyle(palette.skin, 1).fillCircle(cx, 22, 12);
+          g.fillStyle(0xffffff, 0.95).fillRect(36, 22, 3, 2).fillRect(46, 22, 3, 2);
         }
         if (weapon === 'sword') {
-          g.lineStyle(8, 0xd7e4ff, 1).lineBetween(53, 15, 58, 78);
-          g.lineStyle(2, 0x111111, 0.9).lineBetween(53, 15, 58, 78);
-          g.fillStyle(0xffd166, 1).fillRect(48, 54, 17, 5);
+          g.lineStyle(10, 0xd7e4ff, 1).lineBetween(61, 17, 69, 95);
+          g.lineStyle(3, 0x111111, 0.9).lineBetween(61, 17, 69, 95);
+          g.fillStyle(0xffd166, 1).fillRect(54, 66, 26, 6);
         } else if (weapon === 'bow') {
-          g.lineStyle(4, 0xd4f1ff, 1).strokeCircle(54, 43, 18);
-          g.lineStyle(2, 0x10141d, 1).lineBetween(54, 25, 54, 61);
-          g.fillStyle(0xd4f1ff, 1).fillTriangle(38, 40, 54, 36, 54, 44);
+          g.lineStyle(5, 0xd4f1ff, 1).strokeCircle(64, 51, 24);
+          g.lineStyle(2, 0x10141d, 1).lineBetween(64, 27, 64, 75);
+          g.fillStyle(0xd4f1ff, 1).fillTriangle(42, 49, 64, 44, 64, 54);
+          g.lineStyle(2, 0xd4f1ff, 0.85).lineBetween(17, 31, 11, 9).lineBetween(21, 31, 19, 8).lineBetween(25, 33, 27, 10);
         } else if (weapon === 'staff') {
-          g.lineStyle(5, 0xe9d6ff, 1).lineBetween(54, 15, 49, 78);
-          g.fillStyle(0xb388ff, 1).fillCircle(55, 13, 8);
-          g.lineStyle(2, 0xffffff, 0.8).strokeCircle(55, 13, 11);
+          g.lineStyle(6, 0xe9d6ff, 1).lineBetween(65, 13, 57, 99);
+          g.fillStyle(0xb388ff, 1).fillCircle(66, 12, 10);
+          g.lineStyle(2, 0xffffff, 0.8).strokeCircle(66, 12, 14);
+          g.fillStyle(0xb388ff, 0.6).fillCircle(18, 46, 5).fillCircle(65, 64, 4).fillCircle(21, 75, 3);
         } else if (weapon === 'daggers') {
-          g.lineStyle(5, 0x8aff80, 1).lineBetween(16, 45, 3, 32).lineBetween(55, 45, 69, 32);
-          g.fillStyle(0xd7e4ff, 1).fillTriangle(2, 31, 9, 34, 5, 25).fillTriangle(70, 31, 63, 34, 67, 25);
+          g.lineStyle(6, 0x8aff80, 1).lineBetween(18, 55, 3, 40).lineBetween(63, 55, 81, 39);
+          g.fillStyle(0xd7e4ff, 1).fillTriangle(2, 39, 10, 43, 5, 31).fillTriangle(82, 38, 73, 43, 78, 30);
         } else if (weapon === 'scythe') {
-          g.lineStyle(6, 0xe8d7ff, 1).lineBetween(55, 10, 45, 82);
-          g.fillStyle(0xba55d3, 1).fillTriangle(55, 9, 70, 15, 55, 25);
-          g.fillStyle(0x191020, 1).fillTriangle(57, 13, 67, 16, 57, 20);
+          g.lineStyle(7, 0xe8d7ff, 1).lineBetween(65, 10, 52, 101);
+          g.fillStyle(0xba55d3, 1).fillTriangle(65, 9, 82, 16, 63, 29);
+          g.fillStyle(0x191020, 1).fillTriangle(68, 14, 78, 17, 67, 22);
         } else if (weapon === 'chrono') {
-          g.lineStyle(4, 0x67d9ff, 1).strokeCircle(58, 32, 12);
-          g.fillStyle(0xffffff, 0.9).fillCircle(58, 32, 3);
+          g.lineStyle(4, 0x67d9ff, 1).strokeCircle(66, 42, 14);
+          g.fillStyle(0xffffff, 0.9).fillCircle(66, 42, 3);
+          g.lineStyle(2, 0xffffff, 0.75).lineBetween(66, 42, 66, 31).lineBetween(66, 42, 75, 47);
         }
-        g.lineStyle(2, 0x050505, 0.62).strokeRoundedRect(22, 29, 28, 39, 7);
-        g.generateTexture(key, 72, 92);
-      };
-      const drawMonster = () => {
+        g.lineStyle(2, 0x050505, 0.64).strokeRoundedRect(shape.bodyX, shape.bodyY, shape.bodyW, shape.bodyH, 8);
+        g.generateTexture(key, 84, 108);
+      };      const drawMonster = () => {
         if (this.textures.exists('monster')) return;
         g.clear();
         g.fillStyle(0x000000, 0.25).fillEllipse(24, 40, 38, 8);
@@ -822,17 +847,63 @@
       if (save.path === 'mythic') return save.mythic === 'chrono' ? 'hero-chrono' : 'hero-reaper';
       return `hero-${save.baseClass || 'berserker'}`;
     }
+    groundPalette() {
+      const palettes = {
+        town: { top: 0x26334a, base: 0x1b2232, glow: 0x9bdcff },
+        lava: { top: 0x5a1a14, base: 0x241016, glow: 0xff3300 },
+        frost: { top: 0x24445c, base: 0x102536, glow: 0x67d9ff },
+        ruin: { top: 0x4c3b20, base: 0x221e15, glow: 0xffd166 },
+        abyss: { top: 0x2a1645, base: 0x0b1020, glow: 0xba55d3 },
+        arena: { top: 0x3a4050, base: 0x151722, glow: 0xffffff }
+      };
+      return palettes[save.zone] || palettes.town;
+    }
+
+    paintZoneBackground(zoneId) {
+      const zone = ZONES[zoneId] || ZONES.town;
+      const accent = zone.accent || 0xffffff;
+      this.add.rectangle(1800, 140, 3600, 280, accent, 0.045).setDepth(-10).setScrollFactor(0.12);
+      this.add.rectangle(1800, 505, 3600, 90, accent, 0.09).setDepth(-9).setScrollFactor(0.45);
+      if (zoneId === 'lava') {
+        for (let i = 0; i < 7; i += 1) this.add.triangle(260 + i * 520, 360, 0, 120, 120, 0, 250, 120, 0x351012, 0.88).setDepth(-8).setScrollFactor(0.35);
+        for (let i = 0; i < 18; i += 1) this.add.circle(120 + i * 190, 150 + (i % 5) * 46, 3 + (i % 3), 0xff6a21, 0.45).setDepth(-7).setScrollFactor(0.2);
+        this.add.rectangle(1800, 510, 3600, 18, 0xff3300, 0.42).setDepth(-6).setScrollFactor(0.6);
+      } else if (zoneId === 'frost') {
+        for (let i = 0; i < 8; i += 1) this.add.triangle(180 + i * 480, 350, 0, 130, 130, 0, 300, 130, 0x1b4660, 0.82).setDepth(-8).setScrollFactor(0.32);
+        for (let i = 0; i < 22; i += 1) this.add.circle(80 + i * 160, 80 + (i % 7) * 46, 2, 0xd9f7ff, 0.52).setDepth(-7).setScrollFactor(0.18);
+        this.add.rectangle(1800, 496, 3600, 16, 0xb8f4ff, 0.24).setDepth(-6).setScrollFactor(0.55);
+      } else if (zoneId === 'ruin') {
+        for (let i = 0; i < 11; i += 1) {
+          const x = 160 + i * 330;
+          this.add.rectangle(x, 315, 42, 230, 0x3f3524, 0.76).setDepth(-8).setScrollFactor(0.38);
+          this.add.rectangle(x, 195, 82, 20, 0xffd166, 0.18).setDepth(-7).setScrollFactor(0.38);
+        }
+        for (let i = 0; i < 8; i += 1) this.add.circle(320 + i * 410, 210 + (i % 3) * 62, 24, 0xffd166, 0.08).setStrokeStyle(2, 0xffd166, 0.28).setDepth(-7).setScrollFactor(0.25);
+      } else if (zoneId === 'abyss') {
+        for (let i = 0; i < 10; i += 1) this.add.circle(220 + i * 360, 230 + (i % 4) * 52, 80 + (i % 3) * 24, 0x260b42, 0.26).setDepth(-8).setScrollFactor(0.22);
+        for (let i = 0; i < 12; i += 1) this.add.rectangle(130 + i * 300, 310, 12, 250, 0xba55d3, 0.22).setAngle((i % 2 ? 8 : -10)).setDepth(-7).setScrollFactor(0.32);
+        this.add.circle(3040, 165, 56, 0xba55d3, 0.20).setStrokeStyle(4, 0xd7a8ff, 0.34).setDepth(-6).setScrollFactor(0.18);
+      } else if (zoneId === 'arena') {
+        for (let i = 0; i < 12; i += 1) this.add.rectangle(120 + i * 300, 300, 210, 120, i % 2 ? 0x222838 : 0x30384a, 0.62).setDepth(-8).setScrollFactor(0.3);
+        this.add.rectangle(1800, 210, 3600, 30, 0xffffff, 0.14).setDepth(-7).setScrollFactor(0.2);
+      } else {
+        for (let i = 0; i < 9; i += 1) this.add.rectangle(180 + i * 420, 335, 70, 220, 0x20314a, 0.34).setDepth(-8).setScrollFactor(0.3);
+        for (let i = 0; i < 7; i += 1) this.add.circle(280 + i * 480, 210, 42, 0x9bdcff, 0.10).setDepth(-7).setScrollFactor(0.18);
+      }
+    }
     buildZone(zoneId) {
       this.zone = ZONES[zoneId] || ZONES.town;
       this.cameras.main.setBackgroundColor(this.zone.color);
-      this.add.rectangle(1800, 560, 3600, 80, 0x1a1e29).setScrollFactor(1);
+      const ground = this.groundPalette();
+      this.paintZoneBackground(zoneId);
+      this.add.rectangle(1800, 560, 3600, 80, ground.base).setScrollFactor(1);
       this.add.text(28, 24, this.zone.title, { fontFamily: 'Consolas', fontSize: '28px', color: '#ffffff', stroke: '#000000', strokeThickness: 5 }).setScrollFactor(0);
       for (let i = 0; i < 16; i += 1) {
         const x = i * 260 + 80;
         const y = 90 + (i % 4) * 38;
         this.add.rectangle(x, y, 90 + (i % 3) * 32, 12, this.zone.accent, 0.14).setScrollFactor(0.35);
       }
-      this.addPlatform(1800, 540, 3600, 80, 0x202636);
+      this.addPlatform(1800, 540, 3600, 80, ground.top);
       if (save.zone === 'town') this.buildTown();
       else if (save.zone === 'arena') this.buildArena();
       else this.buildTerrainZone(save.zone);
@@ -898,7 +969,7 @@
       this.player.setCollideWorldBounds(true);
       this.player.setDragX(1500);
       this.player.setMaxVelocity(720, 900);
-      this.player.body.setSize(34, 62).setOffset(19, 24);
+      this.player.body.setSize(38, 70).setOffset(23, 34);
       this.facing = 1;
       this.refreshPlayerIdentity(false);
     }
@@ -1099,14 +1170,14 @@
         if (!playerHidden && dist < 400) {
           const dir = Math.sign(this.player.x - enemy.x) || data.dir;
           data.dir = dir;
-          enemy.setVelocityX(dir * (data.boss ? 120 : 95));
+          enemy.setVelocityX(dir * (data.boss ? 145 : 112));
           if (dist < (data.boss ? 92 : 54) && time > data.attackAt) {
-            data.attackAt = time + (data.boss ? 1150 : 900);
+            data.attackAt = time + (data.boss ? 980 : 760);
             this.monsterAttack(enemy);
           }
         } else if (!data.dummy) {
           if (Math.abs(enemy.x - data.baseX) > data.patrol) data.dir *= -1;
-          enemy.setVelocityX(data.dir * (data.boss ? 70 : 52));
+          enemy.setVelocityX(data.dir * (data.boss ? 86 : 64));
         } else {
           enemy.setVelocityX(Math.sin(time / 500) * 70);
           if (enemy.body.blocked.down && Math.random() < 0.004) enemy.setVelocityY(-360);
@@ -1208,15 +1279,15 @@
       const data = enemy?.getData?.('enemy');
       if (!data || data.dead || data.dummy) return;
       if (this.time.now < (data.contactDamageAt || 0)) return;
-      data.contactDamageAt = this.time.now + 850;
+      data.contactDamageAt = this.time.now + 700;
       const push = Math.sign(this.player.x - enemy.x) || 1;
-      this.player.setVelocityX(push * 240);
+      this.player.setVelocityX(push * 310);
       this.player.setVelocityY(Math.min(this.player.body.velocity.y, -120));
-      this.damagePlayer(Math.max(1, Math.round((data.atk || 1) * 0.45)), data.name);
+      this.damagePlayer(Math.max(2, Math.round((data.atk || 1) * 0.68)), data.name);
     }
     monsterAttack(enemy) {
       const data = enemy.getData('enemy');
-      const damage = data.boss ? data.atk : data.atk + save.level;
+      const damage = Math.round(data.boss ? data.atk + save.level * 2 : data.atk + save.level * 1.6);
       this.spawnEnemyAttackFx(enemy.x, enemy.y, data.boss ? 95 : 55);
       this.damagePlayer(damage, data.name);
     }
@@ -1239,7 +1310,8 @@
       this.playerHp = Math.max(0, this.playerHp - finalDamage);
       this.buffs.invincibleUntil = this.time.now + 650;
       this.createDamagePopup(this.player.x, this.player.y - 46, `-${Math.ceil(finalDamage)}`, false, '#ff7070');
-      this.cameras.main.shake(90, 0.006);
+      this.cameras.main.shake(110, 0.009);
+      this.cameras.main.flash(45, 255, 70, 70);
       if (this.playerHp <= 0) this.playerDefeated(source);
     }
 
