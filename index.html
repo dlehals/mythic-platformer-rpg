@@ -4,11 +4,27 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>미스틱 테레인 RPG</title>
-  <link rel="stylesheet" href="styles.css?v=8926618" />
+  <link rel="stylesheet" href="styles.css?v=intro-motion-20260704" />
 </head>
 <body>
   <div id="game-shell">
     <div id="game-root"></div>
+    <section id="introScreen" class="intro-screen visible">
+      <div class="intro-fog"></div>
+      <div class="intro-card">
+        <div class="intro-kicker">MYTHIC TERRAIN AWAKENING</div>
+        <h1>균열이 열린 밤</h1>
+        <p>네 개의 지형이 하나의 세계를 찢고, 잠든 신화 장비가 다시 빛나기 시작했습니다.</p>
+        <p>직업을 고르고, 지형의 힘을 흡수하고, 신화 무기로 마지막 형태를 완성하세요.</p>
+        <div class="intro-zones">
+          <span class="lava">용암</span><span class="frost">서리</span><span class="ruin">유적</span><span class="abyss">심연</span>
+        </div>
+        <div class="intro-actions">
+          <button id="introStartButton" type="button">모험 시작</button>
+          <button id="introSkipButton" type="button">건너뛰기</button>
+        </div>
+      </div>
+    </section>
 
     <section id="startScreen" class="start-screen visible">
       <div class="start-backdrop"></div>
@@ -121,7 +137,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
-  <script src="game.js?v=8926618"></script>
+  <script src="game.js?v=intro-motion-20260704"></script>
 </body>
 </html>
 

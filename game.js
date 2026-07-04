@@ -4,6 +4,7 @@
   const SAVE_KEY = 'mythic-terrain-rpg-save-v1';
   const ACCOUNT_KEY = 'mythic-terrain-rpg-accounts-v1';
   const SESSION_KEY = 'mythic-terrain-rpg-session-v1';
+  const INTRO_KEY = 'mythic-terrain-rpg-intro-seen-v1';
   const ITEM_VALUES = { Common: 10, Rare: 50, Epic: 120, Legendary: 200, Mythic: 1000 };
   const KEYS = ['Z', 'C', 'V', 'R'];
   const clamp = Phaser.Math.Clamp;
@@ -466,6 +467,18 @@
     const accountIdInput = $('accountIdInput');
     const accountPasswordInput = $('accountPasswordInput');
     const playerNameInput = $('playerNameInput');
+    const hideIntro = () => {
+      $('introScreen')?.classList.remove('visible');
+      try { window.sessionStorage?.setItem(INTRO_KEY, '1'); } catch (error) { console.warn('Intro session save failed', error); }
+      if (!save.baseClass && activeScene) activeScene.physics.pause();
+    };
+    $('introStartButton')?.addEventListener('click', hideIntro);
+    $('introSkipButton')?.addEventListener('click', hideIntro);
+    try {
+      if (window.sessionStorage?.getItem(INTRO_KEY)) $('introScreen')?.classList.remove('visible');
+    } catch (error) {
+      console.warn('Intro session read failed', error);
+    }
     const setAuthMode = (mode) => {
       const isRegister = mode === 'register';
       $('showLoginButton')?.classList.toggle('active', !isRegister);
@@ -896,7 +909,7 @@
       this.cameras.main.setBackgroundColor(this.zone.color);
       const ground = this.groundPalette();
       this.paintZoneBackground(zoneId);
-      this.add.rectangle(1800, 560, 3600, 80, ground.base).setScrollFactor(1);
+      this.add.rectangle(1800, 540, 3600, 80, ground.base).setScrollFactor(1);
       this.add.text(28, 24, this.zone.title, { fontFamily: 'Consolas', fontSize: '28px', color: '#ffffff', stroke: '#000000', strokeThickness: 5 }).setScrollFactor(0);
       for (let i = 0; i < 16; i += 1) {
         const x = i * 260 + 80;
@@ -1337,6 +1350,7 @@
       this.comboStep = time - (this.lastBasicAt || 0) > 700 ? 1 : (this.comboStep % 3) + 1;
       this.lastBasicAt = time;
       this.nextAttackAt = time + (save.baseClass === 'assassin' ? 135 : 185);
+      this.playCharacterMotion('basic', this.comboStep);
       this.createBasicSwingFx(this.comboStep);
       if (save.path === 'mythic') {
         this.spawnHitbox({ w: 118, h: 84, offsetX: 68, mult: 2.8, lifetime: 115, knockback: 245, element: 'mythic' });
@@ -1617,6 +1631,8 @@
       this.playerMp -= skill.mp;
       if (skill.cd > 0) this.cooldowns[key] = time + skill.cd;
       this.nextAttackAt = Math.min(this.nextAttackAt, time + 80);
+      this.playCharacterMotion('skill', key);
+      this.createSkillCastFx(skill);
       if (typeof this[skill.handler] === 'function') this[skill.handler]();
       updateHud(this);
     }
@@ -1879,23 +1895,94 @@
       this.tweens.add({ targets: line, alpha: 0, duration: 260, onComplete: () => line.destroy() });
     }
 
-    createBasicSwingFx(step) {
-      const color = this.hitboxColor({ element: save.path === 'mythic' ? 'mythic' : null });
-      const x = this.player.x + this.facing * (step === 3 ? 62 : 48);
-      const y = this.player.y - 2;
-      const angle = this.facing > 0 ? [-22, 8, 30][step - 1] : [202, 172, 150][step - 1];
-      const slash = this.add.ellipse(x, y, step === 3 ? 138 : 104, step === 3 ? 50 : 36, color, step === 3 ? 0.34 : 0.26)
-        .setAngle(angle)
-        .setDepth(24)
-        .setBlendMode(Phaser.BlendModes.ADD);
-      const edge = this.add.rectangle(x + this.facing * 15, y - 2, step === 3 ? 116 : 84, 7, 0xffffff, 0.74)
-        .setAngle(angle)
-        .setDepth(25)
-        .setBlendMode(Phaser.BlendModes.ADD);
-      this.tweens.add({ targets: [slash, edge], alpha: 0, scaleX: 1.45, scaleY: 1.18, duration: step === 3 ? 150 : 115, ease: 'Quad.easeOut', onComplete: () => { slash.destroy(); edge.destroy(); } });
-      this.tweens.add({ targets: this.player, scaleX: 1.06, scaleY: 0.96, duration: 55, yoyo: true });
+    playCharacterMotion(kind, variant = 1) {
+      if (!this.player) return;
+      this.motionToken = (this.motionToken || 0) + 1;
+      const token = this.motionToken;
+      const baseScale = 1.08;
+      const frames = kind === 'skill'
+        ? [
+          { t: 0, sx: 0.96, sy: 1.08, angle: -5, y: -2 },
+          { t: 45, sx: 1.08, sy: 0.96, angle: 7, y: 1 },
+          { t: 90, sx: 1.14, sy: 1.02, angle: 0, y: -4 },
+          { t: 135, sx: 1.04, sy: 1.05, angle: -3, y: -1 },
+          { t: 190, sx: 1, sy: 1, angle: 0, y: 0 }
+        ]
+        : [
+          { t: 0, sx: 0.98, sy: 1.05, angle: -8, y: 0 },
+          { t: 30, sx: 1.12, sy: 0.94, angle: 12, y: 1 },
+          { t: 60, sx: 1.18, sy: 0.90, angle: 18, y: -1 },
+          { t: 95, sx: 1.05, sy: 1.02, angle: -5, y: 0 },
+          { t: 140, sx: 1, sy: 1, angle: 0, y: 0 }
+        ];
+      frames.forEach((frame) => {
+        this.time.delayedCall(frame.t, () => {
+          if (!this.player || token !== this.motionToken) return;
+          this.player.setScale(baseScale * frame.sx, baseScale * frame.sy);
+          this.player.setAngle(frame.angle * this.facing);
+          if (frame.y && this.player.body?.blocked?.down) this.player.setVelocityY(Math.min(this.player.body.velocity.y, frame.y * 18));
+          if (kind === 'skill' && frame.t === 90) this.spawnAfterImage(0x9bdcff, 0.22);
+        });
+      });
+      this.time.delayedCall(frames[frames.length - 1].t + 35, () => {
+        if (!this.player || token !== this.motionToken) return;
+        this.player.setScale(baseScale).setAngle(0);
+      });
     }
 
+    spawnAfterImage(tint = 0xffffff, alpha = 0.20) {
+      const ghost = this.add.sprite(this.player.x - this.facing * 10, this.player.y, this.getPlayerTextureKey())
+        .setScale(this.player.scaleX, this.player.scaleY)
+        .setFlipX(this.player.flipX)
+        .setTint(tint)
+        .setAlpha(alpha)
+        .setDepth(this.player.depth - 1)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({ targets: ghost, x: ghost.x - this.facing * 22, alpha: 0, duration: 220, ease: 'Quad.easeOut', onComplete: () => ghost.destroy() });
+    }
+
+    createBasicSwingFx(step) {
+      const color = this.hitboxColor({ element: save.path === 'mythic' ? 'mythic' : null });
+      const frames = [
+        { t: 0, reach: 34, w: 58, h: 18, alpha: 0.22, angle: -36 },
+        { t: 28, reach: 48, w: 86, h: 28, alpha: 0.34, angle: -18 },
+        { t: 56, reach: 64, w: step === 3 ? 138 : 108, h: step === 3 ? 52 : 38, alpha: 0.46, angle: 8 },
+        { t: 84, reach: 74, w: step === 3 ? 156 : 124, h: step === 3 ? 58 : 42, alpha: 0.28, angle: 28 },
+        { t: 118, reach: 80, w: step === 3 ? 164 : 132, h: step === 3 ? 62 : 46, alpha: 0.12, angle: 42 }
+      ];
+      frames.forEach((frame, index) => {
+        this.time.delayedCall(frame.t, () => {
+          if (!this.player) return;
+          const x = this.player.x + this.facing * frame.reach;
+          const y = this.player.y - 4 + index * 2;
+          const angle = this.facing > 0 ? frame.angle : 180 - frame.angle;
+          const slash = this.add.ellipse(x, y, frame.w, frame.h, color, frame.alpha)
+            .setAngle(angle)
+            .setDepth(24 + index)
+            .setBlendMode(Phaser.BlendModes.ADD);
+          const edge = this.add.rectangle(x + this.facing * 16, y - 2, frame.w * 0.72, 6, 0xffffff, frame.alpha + 0.22)
+            .setAngle(angle)
+            .setDepth(28 + index)
+            .setBlendMode(Phaser.BlendModes.ADD);
+          this.tweens.add({ targets: [slash, edge], alpha: 0, scaleX: 1.28, scaleY: 1.12, duration: 120, ease: 'Quad.easeOut', onComplete: () => { slash.destroy(); edge.destroy(); } });
+        });
+      });
+      if (step === 3) this.time.delayedCall(58, () => this.spawnAfterImage(color, 0.18));
+    }
+
+    createSkillCastFx(skill) {
+      const color = save.path === 'terrain' && save.terrain ? Number(`0x${TERRAIN_JOBS[save.terrain].aura.slice(1)}`) : (save.path === 'mythic' ? 0xba55d3 : BASE_CLASSES[save.baseClass]?.color || 0xffd166);
+      const ring = this.add.circle(this.player.x, this.player.y + 2, 28, color, 0.12).setStrokeStyle(4, color, 0.72).setDepth(22).setBlendMode(Phaser.BlendModes.ADD);
+      const glyph = this.add.text(this.player.x, this.player.y - 64, skill.key, { fontFamily: 'Arial Black', fontSize: '24px', color: '#ffffff', stroke: '#000000', strokeThickness: 5 }).setOrigin(0.5).setDepth(35);
+      this.tweens.add({ targets: ring, radius: 74, alpha: 0, duration: 260, ease: 'Quad.easeOut', onComplete: () => ring.destroy() });
+      this.tweens.add({ targets: glyph, y: glyph.y - 26, alpha: 0, scale: 1.35, duration: 420, ease: 'Quad.easeOut', onComplete: () => glyph.destroy() });
+      for (let i = 0; i < 5; i += 1) {
+        this.time.delayedCall(i * 32, () => {
+          const spark = this.add.circle(this.player.x + Phaser.Math.Between(-28, 28), this.player.y + Phaser.Math.Between(-50, 12), 3 + (i % 2), color, 0.82).setDepth(26).setBlendMode(Phaser.BlendModes.ADD);
+          this.tweens.add({ targets: spark, y: spark.y - 26, alpha: 0, duration: 260, onComplete: () => spark.destroy() });
+        });
+      }
+    }
     createHitSparks(x, y, crit, color) {
       const sparkColor = color ? Phaser.Display.Color.HexStringToColor(color).color : (crit ? 0xfff06a : 0xffffff);
       const count = crit ? 14 : 8;
