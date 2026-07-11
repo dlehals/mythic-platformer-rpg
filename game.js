@@ -672,6 +672,7 @@
       this.nextHazardTickAt = 0;
       this.chronoFrozenUntil = 0;
       this.isTransitioning = false;
+      this.isDefeated = false;
       this.pendingSpawnPoint = null;
     }
 
@@ -688,6 +689,7 @@
       this.nextHazardTickAt = 0;
       this.chronoFrozenUntil = 0;
       this.isTransitioning = false;
+      this.isDefeated = false;
       this.pendingSpawnPoint = data.spawnPoint || null;
     }
 
@@ -1086,9 +1088,16 @@
 
     safeRestart(data = {}) {
       this.isTransitioning = false;
+      this.isDefeated = false;
       this.input.enabled = true;
       if (this.physics?.world) this.physics.world.resume();
-      this.scene.start('GameScene', data);
+      const manager = this.game?.scene;
+      if (!manager) {
+        this.scene.restart(data);
+        return;
+      }
+      manager.stop('GameScene');
+      window.setTimeout(() => manager.start('GameScene', data), 0);
     }
 
     travelTo(zoneId) {
@@ -1111,7 +1120,7 @@
         this.safeRestart({ spawnPoint });
       };
       this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, restart);
-      this.time.delayedCall(260, restart);
+      window.setTimeout(restart, 260);
     }
 
     spawnZoneEnemies() {
@@ -1339,6 +1348,8 @@
           return;
         }
         if (Number.isFinite(projectile.flightVx)) this.lockProjectileMotion(projectile, projectile.flightVx, projectile.flightVy || 0);
+        this.checkProjectileHits(projectile);
+        if (!projectile.active) return;
         const vx = projectile.body.velocity.x;
         const vy = projectile.body.velocity.y;
         if (Math.abs(vx) + Math.abs(vy) > 8) projectile.setRotation(Math.atan2(vy, vx));
@@ -1420,6 +1431,7 @@
     }
 
     damagePlayer(amount, source) {
+      if (this.isDefeated) return;
       if ((this.buffs.invincibleUntil || 0) > this.time.now) return;
       let finalDamage = amount;
       if (this.buffs.manaShield && this.playerMp > 0) {
@@ -1438,14 +1450,18 @@
     }
 
     playerDefeated(source) {
+      if (this.isDefeated) return;
+      this.isDefeated = true;
       toast(`${source}에게 쓰러졌습니다. 마을로 귀환합니다.`);
       const stats = getBaseStats();
-      this.playerHp = Math.ceil(stats.hp * 0.7);
+      this.playerHp = stats.hp;
       this.playerMp = stats.mp;
       save.zone = 'town';
-      this.syncSaveFromPlayer();
+      save.hp = stats.hp;
+      save.mp = stats.mp;
       saveGame();
-      this.time.delayedCall(450, () => this.safeRestart({ spawnPoint: this.defaultSpawnPoint('town') }));
+      this.player?.setVelocity(0, 0);
+      window.setTimeout(() => this.safeRestart({ spawnPoint: this.defaultSpawnPoint('town') }), 450);
     }
 
     syncSaveFromPlayer() {
@@ -1478,18 +1494,18 @@
     }
 
     sniperBasic(step) {
-      if (step === 1) this.spawnProjectile({ texture: 'arrow', speed: 700, mult: 1.1, pierce: 0 });
+      if (step === 1) this.spawnProjectile({ texture: 'arrow', speed: 700, mult: 1.1, pierce: 0, offsetY: -2 });
       if (step === 2) {
-        this.spawnProjectile({ texture: 'arrow', speed: 700, mult: 0.85, pierce: 0, offsetY: -8 });
+        this.spawnProjectile({ texture: 'arrow', speed: 700, mult: 0.85, pierce: 0, offsetY: -10 });
         this.spawnProjectile({ texture: 'arrow', speed: 700, mult: 0.85, pierce: 0, offsetY: 8 });
       }
-      if (step === 3) this.time.delayedCall(70, () => this.spawnProjectile({ texture: 'arrow', speed: 820, mult: 1.95, pierce: 2, scaleX: 2.0 }));
+      if (step === 3) this.time.delayedCall(70, () => this.spawnProjectile({ texture: 'arrow', speed: 820, mult: 1.95, pierce: 2, scaleX: 2.0, offsetY: -2 }));
     }
 
     sorcererBasic(step) {
-      if (step === 1) this.spawnProjectile({ texture: 'orb', speed: 460, mult: 1.18, splash: 28, tint: 0xff6a21, status: 'burn' });
-      if (step === 2) this.spawnProjectile({ texture: 'orb', speed: 500, mult: 1.18, tint: 0x9ae7ff, status: 'slow' });
-      if (step === 3) this.spawnProjectile({ texture: 'orb', speed: 610, mult: 1.58, tint: 0xfff06a, chain: 1, status: 'shock' });
+      if (step === 1) this.spawnProjectile({ texture: 'orb', speed: 460, mult: 1.18, splash: 28, tint: 0xff6a21, status: 'burn', offsetY: -4 });
+      if (step === 2) this.spawnProjectile({ texture: 'orb', speed: 500, mult: 1.18, tint: 0x9ae7ff, status: 'slow', offsetY: -4 });
+      if (step === 3) this.spawnProjectile({ texture: 'orb', speed: 610, mult: 1.58, tint: 0xfff06a, chain: 1, status: 'shock', offsetY: -4 });
     }
 
     assassinBasic(step) {
@@ -1523,6 +1539,34 @@
       return 0xffffff;
     }
 
+    getProjectileAimY(options = {}) {
+      const fallbackY = this.player.y + 42;
+      let targetY = fallbackY;
+      let bestDistance = Infinity;
+      for (const enemy of this.enemySprites || []) {
+        const data = enemy?.getData?.('enemy');
+        if (!data || data.dead) continue;
+        const forwardDistance = (enemy.x - this.player.x) * (this.facing || 1);
+        if (forwardDistance < 0 || forwardDistance > 900 || forwardDistance > bestDistance) continue;
+        bestDistance = forwardDistance;
+        targetY = enemy.body ? enemy.body.y + enemy.body.height * 0.5 : enemy.y;
+      }
+      return Math.max(targetY, fallbackY) + (options.offsetY || 0);
+    }
+
+    checkProjectileHits(projectile) {
+      const payload = projectile.dataPayload;
+      if (!payload || !this.enemySprites?.length) return;
+      const projectileBounds = projectile.getBounds();
+      for (const enemy of this.enemySprites) {
+        const data = enemy?.getData?.('enemy');
+        if (!data || data.dead || payload.hitTargets.has(enemy)) continue;
+        if (!Phaser.Geom.Intersects.RectangleToRectangle(projectileBounds, enemy.getBounds())) continue;
+        this.onProjectileHit(projectile, enemy);
+        if (!projectile.active) break;
+      }
+    }
+
     lockProjectileMotion(projectile, vx, vy) {
       if (!projectile?.body) return;
       projectile.flightVx = vx;
@@ -1546,13 +1590,14 @@
       const spawnDistance = options.spawnDistance || 74;
       const texture = options.texture || 'arrow';
       const color = options.tint || this.hitboxColor(options);
-      const projectile = this.physics.add.sprite(this.player.x + direction * spawnDistance, this.player.y + (options.offsetY ?? -22), texture);
+      const projectileY = this.getProjectileAimY(options);
+      const projectile = this.physics.add.sprite(this.player.x + direction * spawnDistance, projectileY, texture);
       this.projectiles.add(projectile);
       projectile.setDepth(9);
       projectile.setTint(color);
       projectile.setScale(options.scaleX || 1, options.scaleY || 1);
       projectile.setCollideWorldBounds(false);
-      projectile.body.setSize(options.bodyW || (texture === 'orb' ? 16 : 30), options.bodyH || (texture === 'orb' ? 16 : 8), true);
+      projectile.body.setSize(options.bodyW || (texture === 'orb' ? 24 : 38), options.bodyH || (texture === 'orb' ? 24 : 18), true);
       const vx = Math.cos(angle) * speed * direction;
       const vy = Math.sin(angle) * speed;
       this.lockProjectileMotion(projectile, vx, vy);
@@ -1560,9 +1605,17 @@
       projectile.trailColor = color;
       projectile.nextTrailAt = 0;
       projectile.dataPayload = { ...options, remainingPierce: options.pierce || 0, hitTargets: new Set() };
+      projectile.hitScanTimer = window.setInterval(() => {
+        if (!projectile.active) {
+          window.clearInterval(projectile.hitScanTimer);
+          return;
+        }
+        this.checkProjectileHits(projectile);
+      }, 16);
       this.physics.add.overlap(projectile, this.enemyGroup, (shot, enemy) => this.onProjectileHit(shot, enemy));
       this.time.delayedCall(options.life || 1800, () => {
         if (!projectile.active) return;
+        window.clearInterval(projectile.hitScanTimer);
         this.createProjectileImpact(projectile.x, projectile.y, color, 7);
         projectile.destroy();
       });
@@ -1579,7 +1632,10 @@
       if (payload.splash) this.splashDamage(enemy.x, enemy.y, payload.splash, payload.mult || 1, payload);
       if (payload.chain) this.chainDamage(enemy, payload.chain, payload.mult || 1, payload);
       if (payload.remainingPierce > 0) payload.remainingPierce -= 1;
-      else projectile.destroy();
+      else {
+        window.clearInterval(projectile.hitScanTimer);
+        projectile.destroy();
+      }
     }
 
     createProjectileImpact(x, y, color = 0xffffff, size = 10) {
